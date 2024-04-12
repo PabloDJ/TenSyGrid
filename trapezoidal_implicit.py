@@ -5,7 +5,7 @@ from scipy.optimize import fsolve
 
 def trapezoidal_implicit(func, y0, t):
     """
-    Trapezoidal rule with implicit method for solving ODEs.
+    Trapezoidal method with implicit method for solving ODEs.
     
     Parameters:
         func : function

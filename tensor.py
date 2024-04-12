@@ -2,12 +2,11 @@ import numpy as np
 import tensorly as tl
 from scipy.integrate import odeint
 from itertools import product
+from scipy.optimize import root
 import matplotlib.pyplot as plt
 #import tensorflow as tf
 import MTI
-import time
-import tensor_methods
-
+import tensor_methods as methods
 
 #We define grid parameters
 L = 50
@@ -40,7 +39,11 @@ F[0,1,0,0, 0] = 1
 F[1,0,0,0, 1] = -1/C
 F[0,1,0,0, 1] = -R
 F[0,0,0,1, 1] = 1
-F = np.random.rand(*F.shape)
+F_newshape = (2,2,2,2,4)
+F_save = F
+F = np.random.rand(*F_newshape)
+F = np.zeros(*F_newshape)
+F[:, :, :, :, 0:2] = F
 
 eMTI = MTI.eMTI(n, m, p, F, G)
 eMTI.CP_decomposition(rank = 10)
@@ -67,50 +70,37 @@ t = np.linspace(0, (T - 1) * dt, T)
 f1 = eMTI.CP_stepforward(compact)
 f2 = eMTI.tensor_stepforward(compact)
 
-
 f1_eval = f1(x_0, 0, u, dt)
 f2_eval = f2(x_0, 0, u, dt)
 print(f"f1 eval {f1_eval}")
 print(f"f2 eval {f2_eval}")
 
-A =  tl.dot(F, F)
+def func(F_CP):
+    def res(x_save):
+        x = x_save[0:n]
+        u = x_save[n:n+m]
+        return methods.MTI_product(F_CP, x, u)
+    return res
 
+def jacob(F_CP):
+    DF = methods.diffenrentiation_CP(0, F_CP)
+    def res(x_save):
+        res = []
+        x = x_save[0:n]
+        u = x_save[n:n+m]
+        for (i, D_Fi) in enumerate(DF):
+            res.append(methods.MTI_product(D_Fi, x, u))
+        return np.array(res).T
+    return res 
 
-raise Exception("Stopping script here")
-B = np.array([[0,0],[0,1]])
-C = np.array([[0,1],[-1/C,-R]])
-res = np.dot(C,x_0) + np.dot(B,u[:,0])
-for x0, x1, u0, u1 in product(range(2), repeat=4):
-    x_0 = np.array([x0, x1])
-    u[:,0] = np.array([u0, u1])
-    f1_eval = f1(x_0, 0, u, dt)
-    f2_eval = f2(x_0, 0, u, dt)
-    res = np.dot(C,x_0) + np.dot(B,u[:,0])
-    print((x0, x1, u0, u1), " ", f"f1 eval {f1_eval} f2 eval {f2_eval} res {res}")
+f = func(eMTI.F_factors)
 
-#raise Exception("Stopping script here")
-CP_ODE_start = time.time()
-sol = odeint(eMTI.CP_stepforward(compact), x_0, t, args=(u, dt))
-CP_ODE_end = time.time()
-CP_ODE_time = CP_ODE_end - CP_ODE_start
-print(f"Computation time CP= {CP_ODE_time}")
+j = jacob(eMTI.F_factors)
 
-plt.plot(t, sol[:, 0], 'b', label='I(t)')
-plt.plot(t, sol[:, 1], 'g', label='dI/dt(t)')
-plt.legend(loc='best')
-plt.xlabel('t')
-plt.grid()
-plt.show()
-
-tensor_ODE_start = time.time()
-sol = odeint(eMTI.tensor_stepforward(compact), x_0, t, args=(u, dt))
-tensor_ODE_end = time.time()
-tensor_ODE_time = tensor_ODE_end - tensor_ODE_start
-print(f"Computation time with tensors = {tensor_ODE_time}")
-
-plt.plot(t, sol[:, 0], 'b', label='I(t)')
-plt.plot(t, sol[:, 1], 'g', label='dI/dt(t)')
-plt.legend(loc='best')
-plt.xlabel('t')
-plt.grid()
-plt.show()
+x0 = np.array([i_0, didt_0, u[0,0], u[1,0]])
+print(f(x0))
+print(j(x0))
+sol = root(f, x0, jac=j)
+print(f" sol{sol}")
+print(f" f(x*) {f(sol.x)}")
+print(f" J(x*) {j(sol.x)}")

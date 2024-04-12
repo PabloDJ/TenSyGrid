@@ -12,6 +12,11 @@ class eMTI:
     def CP_decomposition(self, normalize= True, rank = 1):
         F_tensor = tl.tensor(self.F)
         G_tensor = tl.tensor(self.G)
+        self.F_tensor = F_tensor
+        try:
+            self.G_tensor = G_tensor
+        except:
+            self.G_tensor = F_tensor
         if self.n !=0:
             self.F_factors = tl.decomposition.parafac(F_tensor, rank)
         if self.p !=0:
@@ -20,9 +25,10 @@ class eMTI:
 
     def CP_stepforward(self, compact=True):
 
-        def definition(x, t, compact, u, dt):
+        def definition(x, t, u, dt, compact = compact, verbose = False):
             T = len(u[:,0])
             u = u[:, min(T-1, round(t/dt))]
+
             res_x = np.array([])
             res_y = np.array([])
             F_factors = []
@@ -33,28 +39,104 @@ class eMTI:
             if self.n!= 0:
                 F_factors = self.F_factors.factors
                 F_weights = self.F_factors.weights
-                res_x = np.dot(F_factors[1].T,np.array([[1], [x[1]]]))*0
+                res_x = np.dot(F_factors[0].T,np.array([[1], [x[0]]]))*0
+                res_x = np.ones(res_x.shape)
             if self.p!=0:
                 G_factors = self.G_factors.factors
                 G_weights = self.G_factors.weights
-                res_y = np.dot(F_factors[1].T,np.array([[1], [u[1]]]))*0
+                res_y = np.dot(F_factors[0].T,np.array([[1], [u[0]]]))*0
+                res_y = np.ones(res_y.shape)
 
-            for i, F_i in enumerate(F_factors[:-1]):
-                res_x = res_x*np.dot(F_i.T, np.array([[1], [x[1]]]))
-            for i, G_i in enumerate(G_factors[:-1]):
-                res_y = res_y*np.dot(G_i.T,np.array([[1], [u[1]]]))    
-
-            if self.n!= 0:
-                res_x = F_weights*np.dot(F_factors[-1],res_x)
-            if self.p!= 0:
-                res_y = G_weights*np.dot(G_factors[-1],res_y)
-
+            xu = np.concatenate((x,u))
+            for i, x_i in enumerate(xu):
+                F_i = F_factors[i]
+                try:
+                    G_i = G_weights[i]*G_factors[i]
+                except:
+                    G_i = F_factors[i]
+                res_x = res_x*np.dot(F_i.T,np.array([[1], [x_i]]))
+                #res_y = res_y*np.dot(G_i.T,np.array([[1, x_i]]))
+                if verbose:
+                    print(f"i {i}, xi {x_i}, F_i {F_i.T}, factor {np.dot(F_i.T,np.array([1, x_i]))}, resx {res_x}" )
+            
+            res_x = F_factors[-1]@res_x
             res = (res_x, res_y)
+
             if compact:
                 res = res_x.flatten()
             return res
         return definition
     
+    def CPN_stepforward(self, compact=True):
+
+        def definition(x, t, u, dt, compact = compact, verbose = False):
+            T = len(u[:,0])
+            u = u[:, min(T-1, round(t/dt))]
+
+            res_x = np.array([])
+            res_y = np.array([])
+            F_factors = []
+            F_weights = []
+            G_factors = []
+            G_weights = []
+
+            if self.n!= 0:
+                F_factors = self.F_factors.factors
+                F_weights = self.F_factors.weights
+                res_x = np.dot(F_factors[0].T,np.array([[1], [x[0]]]))*0
+                res_x = np.ones(res_x.shape)
+            if self.p!=0:
+                G_factors = self.G_factors.factors
+                G_weights = self.G_factors.weights
+                res_y = np.dot(F_factors[0].T,np.array([[1], [u[0]]]))*0
+                res_y = np.ones(res_y.shape)
+
+            xu = np.concatenate((x,u))
+            for i, x_i in enumerate(xu):
+                F_i = F_factors[i]
+                try:
+                    G_i = G_weights[i]*G_factors[i]
+                except:
+                    G_i = F_factors[i]
+                res_x = res_x*np.dot(F_i.T,np.array([[1], [x_i]]))
+                #res_y = res_y*np.dot(G_i.T,np.array([[1, x_i]]))
+                if verbose:
+                    print(f"i {i}, xi {x_i}, F_i {F_i.T}, factor {np.dot(F_i.T,np.array([1, x_i]))}, resx {res_x}" )
+            
+            res_x = F_factors[-1]@res_x
+            res = (res_x, res_y)
+
+            if compact:
+                res = res_x.flatten()
+            return res
+        return definition
+    
+    def tensor_stepforward(self, compact=True):
+        
+        def definition(x, t, u, dt, compact=compact):
+            T = len(u[:,0])
+            u = u[:, min(T-1, round(t/dt))]
+
+            m_xu = tl.tensor(np.array([1]))
+
+            for x_i in x:
+                aux = np.array([[1], [x_i]])
+                m_xu = tl.kron(m_xu, aux)
+            for u_i in u:
+                aux = np.array([[1], [u_i]])
+                m_xu = tl.kron(m_xu, aux)
+            
+            new_shape = tuple(2 for _ in range(self.n + self.m)) 
+            m_xu = tl.reshape(m_xu, new_shape)
+            
+            axis = [i for i in range(self.n + self.m)]
+            res_x = np.tensordot(self.F, m_xu, axes=(axis, axis))
+            if compact:
+                res = res_x.flatten()
+            return res
+        
+        return definition
+  
     def convert_to_iMTI(self, equality=True):
         N = self.n + self.p
         H_size = (2 for _ in range(2**(2*self.n+self.m+self.p))) + (N,)
@@ -109,3 +191,11 @@ class iMTI:
     def CP_decomposition(self, rank = 5):
         H_tensor = tl.tensor(self.H, rank)
         self.F_factors = tl.decomposition.parafac(H_tensor,rank)
+
+class sMTI:
+    def __init__(self, eMTI, algebra):
+        self.eMTI = eMTI
+        self.algebra = algebra
+
+    def solve(self):
+        return 0
