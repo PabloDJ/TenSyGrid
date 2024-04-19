@@ -6,6 +6,7 @@ from scipy.optimize import root
 import matplotlib.pyplot as plt
 #import tensorflow as tf
 import MTI
+import Model_MTI
 import tensor_methods as methods
 
 #We define grid parameters
@@ -19,7 +20,9 @@ C = 20
 #y is the output of size p 
 n = 2
 m = 2
+e = 2 
 p = 0
+T = 100
 #Here x = (i i'), u = (v v')
 
 #we input the equation as tensors
@@ -39,13 +42,16 @@ F[0,1,0,0, 0] = 1
 F[1,0,0,0, 1] = -1/C
 F[0,1,0,0, 1] = -R
 F[0,0,0,1, 1] = 1
-F_newshape = (2,2,2,2,4)
+F_newshape = (2,2,2,2,2,2,2)
 F_save = F
 F = np.random.rand(*F_newshape)
-F = np.zeros(*F_newshape)
-F[:, :, :, :, 0:2] = F
+F = np.zeros(F_newshape)
+F[:, :, :, :, 0:2] = F_save
+F = np.random.rand(*F_newshape)
+
 
 eMTI = MTI.eMTI(n, m, p, F, G)
+iMTI = MTI.iMTI(n, m, p, e, F)
 eMTI.CP_decomposition(rank = 10)
 print(eMTI.F_factors)
 
@@ -93,11 +99,30 @@ def jacob(F_CP):
         return np.array(res).T
     return res 
 
-f = func(eMTI.F_factors)
+x0 = np.array([i_0, didt_0])
+u_0 = np.array([0,0])
+u = np.zeros((T,2))
+u = np.random.rand(T,2)
+iMTI.set_MTI_state(np.array([i_0, didt_0]))
+iMTI.set_MTI_control(u_0)
+iMTI.CP_decomposition(rank = 10)
 
-j = jacob(eMTI.F_factors)
+model_mti = Model_MTI.Model_MTI(iMTI, x0, u, t, dt, T)
+model_mti.update_MTI()
+model_mti.x = np.array(model_mti.x)
+print(" sol shape ", model_mti.x.shape)
 
-x0 = np.array([i_0, didt_0, u[0,0], u[1,0]])
+plt.plot(range(len(model_mti.x[:, 0])), model_mti.x[:, 0], 'b', label='I(t)')
+plt.plot(range(len(model_mti.x[:, 1])), model_mti.x[:, 1], 'g', label='dI/dt(t)')
+plt.legend(loc='best')
+plt.xlabel('t')
+plt.grid()
+plt.show()
+
+raise Exception("end scrpt")
+f = iMTI.Implicit_function()
+j = iMTI.Implicit_diff()
+
 print(f(x0))
 print(j(x0))
 sol = root(f, x0, jac=j)

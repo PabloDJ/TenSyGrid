@@ -3,6 +3,7 @@ import tensorly as tl
 from scipy.integrate import odeint
 from itertools import product
 import matplotlib.pyplot as plt
+from scipy.optimize import root
 #import tensorflow as tf
 import MTI
 import time
@@ -43,6 +44,7 @@ F[0,0,0,1, 1] = 1
 F = np.random.rand(*F.shape)
 
 eMTI = MTI.eMTI(n, m, p, F, G)
+iMTI = MTI.iMTI(n, m, p, n+m, F)
 eMTI.CP_decomposition(rank = 10)
 print(eMTI.F_factors)
 
@@ -73,7 +75,6 @@ f2_eval = f2(x_0, 0, u, dt)
 print(f"f1 eval {f1_eval}")
 print(f"f2 eval {f2_eval}")
 
-A =  tl.dot(F, F)
 
 
 raise Exception("Stopping script here")
