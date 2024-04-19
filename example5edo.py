@@ -14,7 +14,7 @@ def system(t, y):
 
 # Initial conditions and time span
 y_initial = [1, 0, 0, 0, 0]
-t_span = (0, 50)  # From time t=0 to t=10
+t_span = (0, 50)  # From time t=0 to t=50
 
 # Solve the system
 sol = solve_ivp(system, t_span, y_initial, t_eval=np.linspace(0, 50, 100))
