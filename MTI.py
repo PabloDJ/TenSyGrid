@@ -4,6 +4,11 @@ from itertools import product
 import tensorly as tl
 import tensor_methods as tmethods
 
+class Tensor_decomposition:
+    def __init__(self, factors, weights):
+        self.factors = factors
+        self.weights = weights
+
 class eMTI:
     def __init__(self, n, m, p, F, G):
         self.n = n

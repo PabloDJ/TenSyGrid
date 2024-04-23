@@ -9,6 +9,7 @@ import MTI
 import Model_MTI
 import tensor_methods as methods
 import numerical as num
+import time
 
 #We define grid parameters
 L = 50
@@ -49,7 +50,7 @@ def f_EDO(x, t):
     return res
 
 x_0 = np.random.rand(2)
-sol = odeint(f_EDO, x_0, t)
+sol = num.trapezoidal_implicit(f_EDO, x_0, t)
 
 plt.plot(t, sol[:, 0], 'b', label='I(t)')
 plt.plot(t, sol[:, 1], 'g', label='dI/dt(t)')
@@ -76,31 +77,35 @@ F[0, 0,  0, 0, 0, 1, 3] = -1
 F[0, 0,  0, 1, 0, 1, 4] = 1
 F[0, 0,  1, 0, 1, 0, 4] = 1
 F[0, 0,  0, 0, 0, 0, 4] = -1
-F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=1) 
+F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=5) 
 
-#WE have system st x = (x1, u1, u2, v1, v2) x' = (x)
-def DAE_f(x_aux, dxdt, t):
-    print(f"xaux {x_aux}")
-    print(f"dxdt[0:2] {dxdt[0:2]}")
-    x = np.zeros(len(x_aux) + 1)
-    x[0:1] = dxdt[0:1]
-    x[1:] = x_aux
-    return methods.CP_MTI_product(F_CP_tensor, x) 
+#WE have system st x = (xdot1, x1, u1, u2, v1, v2) dxdt = (x)'
+def DAE_f(x, dxdt, t):
 
-def DAE_J(x_aux, dxdt, t):
+    xaux = np.zeros(len(x) + 1)
+    xaux[0] = dxdt[0]
+    xaux[1:] = x
+    res = methods.CP_MTI_product(F_CP_tensor, xaux)
+    #We add the constraint  
+    return res
+
+def DAE_J(x, dxdt, t):
     DF = methods.diffenrentiation_CP(F_CP_tensor)
-    x = np.zeros(len(x_aux) + 1)
-    x[0:1] = dxdt[0:1]
-    x[1:] = x_aux
-    print("x shape", x.shape)
-    return methods.compute_diff_CPx(DF, x)
+    J = np.zeros((len(x), len(x)))
+
+    xaux = np.zeros(len(x) + 1)
+    xaux[0] = dxdt[0]
+    xaux[1:] = x
+    J = methods.compute_diff_CPx(DF, x)
+    return J
 
 x1 = np.random.rand()
+x1dot = 0
 x2 = np.random.rand()
 u1 = np.cos(x2)
 u2 = 1 - u1**2
 x_0 = np.array([x1, u1, u2, u1, u2])
-sol = num.backward_euler_DAE(DAE_f, DAE_J, x_0, t)
+x_sol = num.backward_euler_DAE(DAE_f, DAE_J, x_0, t)
 
 plt.plot(t, sol[:, 0], 'b', label='I(t)')
 plt.plot(t, sol[:, 1], 'g', label='dI/dt(t)')

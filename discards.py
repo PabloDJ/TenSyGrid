@@ -1,3 +1,6 @@
+#DISCARDED FILES AND FUCNTIONS
+#COULD BE USEFUL LATER
+
 def func(F_CP):
     def res(x_save):
         x = x_save[0:n]

@@ -1,5 +1,6 @@
 import numpy as np
 import tensorly as tl
+#import tensorflow as tf
 import copy
 from scipy.optimize import fsolve
 
@@ -9,11 +10,13 @@ def CP_MTI_product(CP_tensor, x):
 
     res_x = np.dot(F_factors[0].T,np.array([[1], [x[0]]]))*0
     res_x = np.ones(res_x.shape)
-    for i, x_i in enumerate(x):
+    for i in range(len(x)):
+        x_i = x[i]
         F_i = F_factors[i]
         res_x = res_x*np.dot(F_i.T,np.array([[1], [x_i]]))
 
     res_x = F_factors[-1]@res_x
+
     res = res_x.flatten()
     return res
 
@@ -45,23 +48,21 @@ def diffenrentiation_CP(F):
 
 def compute_diff_CP(D_F, x, u):
     n = len(D_F)
-    p = D_F[-1].shape[1]
+    p = D_F[0].factors[-1].shape[0]
     Jacobian = np.zeros(p, n)
 
     for (i, D_Fi) in enumerate(D_F):
-        prod = MTI_product(D_F, x, u)
+        prod = MTI_product(D_Fi, x, u)
         Jacobian[:,i] = prod
     return Jacobian
 
 def compute_diff_CPx(D_F, x):
     n = len(D_F)
-    p = D_F[-1].shape[1]
-    Jacobian = np.zeros((p, n))
-    
+    p = D_F[0].factors[-1].shape[0]
+    Jacobian = np.zeros((p, len(x)))
 
-    for (i, D_Fi) in enumerate(D_F):
+    for i in range(len(x)):
+        D_Fi = D_F[i]
         prod = CP_MTI_product(D_Fi, x)
-        print(f"Jacobian shape {Jacobian.shape}")
-        print(f"prod shape {prod.shape}")
         Jacobian[:,i] = prod
     return Jacobian
