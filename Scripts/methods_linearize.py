@@ -22,9 +22,11 @@ def inner_product(u, v, bounds):
     
     func = f(u,v)
     def func_wrapper(*args):
-        return func(np.array(args))
-    
+        res = func(np.array(args))
+        return res
+    print("integration start")
     result, error = integrate.nquad(func_wrapper, ranges=bounds_var)
+    print("integration end")
     return result
 
 def graham_schmidt(base, inner_product):
@@ -78,6 +80,12 @@ def integrate_symbolic(x, expr):
     integrated_expr = expr
     for xi in x:
         integrated_expr = sp.integrate(integrated_expr, xi)
+    return integrated_expr
+
+def integrate_symbolic_defined(x, expr, bounds):
+    integrated_expr = expr
+    for (i,xi) in enumerate(x):
+        integrated_expr = sp.integrate(integrated_expr, (xi,) + (bounds[i],))
     return integrated_expr
 
 def tensorize(x):

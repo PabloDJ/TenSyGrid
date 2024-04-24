@@ -67,12 +67,12 @@ for i in range(n):
     G[tuple(G_index_v) + (i,)] = -1
 #We now consider the Algebraic part
 
-F_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(F), rank=15) 
-F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
+#F_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(F), rank=15) 
+#F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
 #F_CP_tensor = tl.decomposition.symmetric_parafac_power_iteration(tl.tensor(F), rank=10) 
 #F_CP_tensor = tl.decomposition.non_negative_parafac(tl.tensor(F), rank=10) 
-#F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=10) 
-#G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=10) 
+F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=5) 
+G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=5) 
 G_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(G), rank=10) 
 G_CP_tensor = MTI.Tensor_decomposition(G_CP_tensor[1],G_CP_tensor[0])
 
@@ -82,18 +82,23 @@ f1 = lambda x: np.tensordot(F, l_methods.monomial(x, tensorize = True), axes=(ax
 f2 = lambda x: methods.CP_MTI_product(F_CP_tensor, x)
 f3 = lambda x: f_EDO(x[:n], 1)
 
-x_0 = np.random.rand(2*n)
+x_0 = np.random.rand(n)
+z_0 = x_0
+xz_0 = np.concatenate((x_0, z_0))
+xz_0 = np.random.rand(2*n)
+print("shape xz ", xz_0.shape)
+print("shape F", F.shape)
+print("x monomial shape", l_methods.monomial(xz_0, tensorize = True).shape)
 u = np.random.rand(110,110)
 dt = 0.1
 t = np.linspace(0, 0.2, 10)
 f1_eval = f1(x_0)
-f2_eval = f2(x_0)
-f3_eval = f3(x_0)
+f2_eval = f2(xz_0)
+f3_eval = f3(xz_0)
 print(f"f1 eval {f1_eval}")
 print(f"f2 eval {f2_eval}")
 print(f"f3 eval {f3_eval}")
 
-raise Exception("stop the count")
 EDO_start = time.time()
 print("sol 1")
 sol = odeint(f_EDO, x_0, t)
@@ -125,7 +130,7 @@ def DAE_J(x, z, t):
     return J
 
 
-z_0 = x_0
+
 DAE_start = time.time()
 x_sol, z_sol = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
 DAE_time = time.time()- DAE_start

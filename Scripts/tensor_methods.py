@@ -16,7 +16,6 @@ def CP_MTI_product(CP_tensor, x):
         res_x = res_x*np.dot(F_i.T,np.array([[1], [x_i]]))
 
     res_x = F_factors[-1]@res_x
-
     res = res_x.flatten()
     return res
 
