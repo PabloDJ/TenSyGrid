@@ -73,8 +73,6 @@ def F(x):
 F = np.random.rand(*array_shape)
 coef = np.zeros(len(base_GS))
 
-raise Exception("stop")
-
 for i in range(len(coef)):
     coef[i] = inner_product_symbolic(F, base_GS[i])
 

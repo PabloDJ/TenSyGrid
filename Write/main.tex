@@ -2,7 +2,11 @@
 \usepackage[english]{babel}
 \usepackage[utf8]{inputenc}
 \usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}% http://ctan.org/pkg/algorithms
+\usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 \usepackage{tikz-cd}
+\usepackage[colorlinks, linkcolor = blue, citecolor = magenta]{hyperref}
 \title{TenSyGrid}
 
 \author{Pablo de Juan Vela $^{1}$ \\
@@ -17,288 +21,235 @@
 
 \section{Tensor Notation}
 
-\section{Initial Problem \& Motivation}
+A tensor is an N-way array where its values are accesed by N indeces. In this sense, a vector is an order 1 tensor and a matrix an order 2 tensor.
+A tensor of order n in the real numbers can de defined as $F \in \mathbb{R}^{I_1 \times ... \times I_n}$, where $I_i$ is the dimension of the $i_{th}$ order.
 
-\begin{align}
-    P_i &= V_i \sum_k \abs{V_k} \abs{Y_{i,k}} cos(\theta_{i,k} +\delta_i -\delta_k) \\
-    Q_i &= V_i \sum_k \abs{V_k} \abs{Y_{i,k}} sin(\theta_{i,k} +\delta_i -\delta_k) 
-\end{align}
 
-Goals
-\begin{itemize}
-    \item Linearize the previous model using a Multilinear model
-\end{itemize}
+
+\subsection{Tensor Operations}
+
+Let $F \in \mathbb{\mathbb{R}^{i_1 \times ... \times i_n}$. Then the tensor product can be defined as 
+
+\begin{equation}
+    F \otimes G :=
+\end{equation}
+
+\begin{equation}
+    <F,G>
+\end{equation}
+
 
 \section{Multilinear models}
 
 A multi linear equation takes the form of:
 
 \begin{align}
-    y &= \sum_{i_n = 0}^{i_n = 1}...\sum_{i_1 = 0}^{i_1 = 1} a_{i_1, ..., i_n} x_1^{i_1}...x_n^{i_n} \\
-    &= a + x_1 - 3x_2 + 3x_1x_4 + ... 
+    p(x) &= \sum_{i_n = 0}^{i_n = 1}...\sum_{i_1 = 0}^{i_1 = 1} a_{i_1, ..., i_n} x_1^{i_1}...x_n^{i_n} \\ 
 \end{align}
 
-\subsection{Tensor Formulation}
-
-Tensors are a generalization of matrices in $n$ dimensions. They are useful for representing multilinear models:
-
-\begin{align}
-    x &\in \mathbb{R}^n \\
-    y &\in \mathbb{R}^p \\
-    F &\in \mathbb{R}^{2^{(n)} \times p} \\
-    y &= <F, m(x)>
-\end{align}
-
-For equation p we can see how the tensor $F$ stores the information from the multilinear equation.  
-\begin{equation}
-    F_{i_1,...,i_n,p} = a_{i_1, ..., i_n, p}
-\end{equation}
-\subsection{CP decomposition}
-Let $\mathcal{F}$ be a tensor such that $\mathcal{F} \in \mathbb{R}^{2^n \times p}$ then a rank-$R$ decomposition of the tensor $\mathcal{F}$ takes the following form. With $\mathbf{a}_{i,r}  \in \mathbb{R}^2 \ \forall i\leq n$ and $\mathbf{a}_{m+1,r}  \in \mathbb{R}^p$. 
+We can stablish a relationship between the coefficients of a multilinear polinomial in $x\mathbb{R}^{n}$ 
+and the entries of a tensor $F \in \mathbb{R}^{\times_2 n}$. The following equation describes the relationship between
+the multi linear polynomial $p(x)$ and a tensor $F$.
 
 \begin{equation}
-    \mathcal{F} = \sum_{r=1}^{R} \lambda_r \mathbf{a}_{0,r} \otimes\mathbf{a}_{1,r} \otimes \mathbf{a}_{2,r} \dots \otimes \mathbf{a}_{c,r}\otimes \cdots \otimes \mathbf{a}_{n+1,r}
+    F_{i_1,...,i_n} = a_{i_1, ..., i_n}
 \end{equation}
 
-Given this decomposition we can build a new expression for $\mathcal{F}$:
 
-\begin{align}
-    \mathcal{F} = [F_1, \hdots F_n, F_\phi] \\
-    F_i \in \mathbb{R}^{2 \times R} \ \forall i \in [n], \hspace{1cm} F_\phi \in \mathbb{R}^{p \times R}
-\end{align}
 
-\begin{figure}[htbp]
-  \centering
-  \includegraphics[width=\textwidth]{images/tensorCP.png}
-  \caption{Tensor Decomposition}
-  \label{fig:tensorCP}
-\end{figure}
+\subsection{Multilinear Time Independent Models}
 
-\section{Objectives}
+Multilinear Time Independent models or (MTI) describes a system and its evolution over time. 
+The values used to define the system's operations are the following:
 
-\subsection{ODE resolution}
-
-\begin{align}
-    \dot{x} &= <F,M(x,u)> \\
-    y &= <G,M(x,u)> \\
-\end{align}
-
-\section{Case Study}
-
-\begin{align}
-    \dot{x} &= <F,M(x,u)> \\
-    y &= <G,M(x,u)> \\
-\end{align}
-
-\begin{equation}
-    x = 
-    \begin{pmatrix}
-    i \\
-    \frac{\partial i}{\partial t}
-    \end{pmatrix},
-    u = 
-    \begin{pmatrix}
-    v \\
-    \frac{\partial v}{\partial t}
-    \end{pmatrix},
-    x_0 =
-    \begin{pmatrix}
-    i(0) \\
-    \frac{\partial i}{\partial t}(0)
-    \end{pmatrix}
-\end{equation}
-
-\begin{equation}
-     \begin{pmatrix}
-    i \\
-    \frac{\partial i}{\partial t}
-    \end{pmatrix}' =
-    \begin{pmatrix}
-    0            &  1 \\
-    -\frac{1}{C} & -R
-    \end{pmatrix}
-    \begin{pmatrix}
-    i \\
-    \frac{\partial i}{\partial t}
-    \end{pmatrix}
-    +
-    \begin{pmatrix}
-    0 & 0 \\
-    0 & 1
-    \end{pmatrix}
-    \begin{pmatrix}
-    v \\
-    \frac{\partial v}{\partial t}
-    \end{pmatrix}
-\end{equation}
-
-\section{Linearization}
-
-\begin{align}
-    P_i &= V_i \sum_k \abs{V_k} \abs{Y_{i,k}} cos(\theta_{i,k} +\delta_i -\delta_k) \\
-    Q_i &= V_i \sum_k \abs{V_k} \abs{Y_{i,k}} sin(\theta_{i,k} +\delta_i -\delta_k) \\
-    1 &= cos^2(\theta_{i,k} +\delta_i -\delta_k) + sin^2(\theta_{i,k} +\delta_i -\delta_k) 
-\end{align}
-
-We introduce the new variables $\lambda_{i,k}, \mu_{i,k}$ to perform a variable change:
-\begin{align}
-    \lambda_{i,k} &:= cos(\theta_{i,k} +\delta_i -\delta_k)\\
-    \mu_{i,k} &:= sin(\theta_{i,k} +\delta_i -\delta_k)\\
-    u_1 &= \lambda_{i,k} \\
-    u_2 &= \mu_{i,k} \\
-\end{align}
-
-Algebraic Equation:
-\begin{align}
-    \lambda_{i,k}^2 + \mu_{i,k}^2 = 1
-\end{align}
-
-Algebraic Multi Linear Equations:
-\begin{align}
-    0 &= v_1 - u_1 \\
-    0 &= v_2 - u_2 \\
-    0 &= (v_1 u_1 + u_2 v_2)v_3-1
-\end{align}
-
-\section{MTI Model}
-
-\subsection{eMTI model}
-\begin{align}
-    \dot{x} &= <F|M(x,u,v)> \\
-    y &= <G|M(x,u,v)>
-\end{align}
-
-\subsection{sMTI model}
-
-\begin{align}
-    E \dot{x} = <F|M(x,u,v)>
-\end{align}
-
-\begin{equation}
-E= 
-    \begin{pmatrix}
-    I_n            &  0 \\
-    0 & 0
-    \end{pmatrix},
-F = 
-    \begin{pmatrix}
-    F_1 \\
-    F_2
-    \end{pmatrix}
-\end{equation}
-
-\begin{equation}
-    \left\{
-\begin{aligned}
-    \dot{x} = <F_1|M(x,u,v)> \\
-    0 = <F_2|M(x,u,v)>
-\end{aligned}
-\right.
-\end{equation}
-
-\section{DAE Formulation \& Index}
-A Differential-Algebraic Equation (DAE) is a set of equations such that . In this section we want to explore the different ways of expressing a MTI as the different properties each formulation can have. Let us first define what a DAE is. Let $F: \mathbb{R}^+ \times \mathbb{R}^n \times \mathbb{R}^n \math \longleftrightarrow \mathbb{R}^n$ then the implicit formulation of a DAE is:
-
-\begin{align}
-    F(t, \dot{x}, x) &= 0 \\
-    \dot{x}(t) &= \frac{\partial x}{\partial t}(t) 
-\end{align}
-
-DAE can also be expressed in implicit form. In this way the DAE is separated into differential and algebraic equations. 
-
-\begin{align}
-    \dot{x} &= f(x, y, t) \\
-    0 = g(x, y, t)
-\end{align}
-
-\subsection{Index}
-
-The index of a DAE is a measure of how close is a given DAE to any given ODE by derivating the equations f the DAE. Mores specifically, a DAE's index is defined as the higher order  
-
-\section{Applications}
-
-\subsection{Idea 1: Stationary Model}
-
-We study the model for $t \longleftrightarrow \infty$. We first define the tensor ODE  where, $x,\dot{x} \in \mathcal{C}([0,T]^n)$
-
-\begin{equation}
-    \dot{x}(t) = <F_1|M(x(t),u(t),v(t))> 
-\end{equation}
-
-By just taking the limit with regards to the time t we can ignore the dependency on $t$ and just consider $x, \dot{x} \in \mathbf{R}^n$. In this case we just end up with a bigger multilinear (?) system to solve in implicit form:
-
-\begin{align}
-     \dot{x} - <F_1|M(x,u,v)> &= 0 \\
-     <F_2|M(x,u,v)> = 0
-\end{align}
-
-We can take advantage of this model by using the CP-decomposition and computing the Jacobian more easily that way. 
-
-\subsection{Idea 2: Dynamic Model}
-We discretize the time domain as $\mathcal{T} = \{0, ..., T\}$ such that in this step the following steps are followed. 
-
-Initialization:
 \begin{itemize}
-    \item $x_0$ is initialized
+    \item $x \in\mathbb{R}^n$ the state.   
+    \item $y \in\mathbb{R}^p$ the output.   
+    \item $u \in\mathbb{R}^m$ the input.   
 \end{itemize}
 
-Procedure:
-\begin{itemize}
-    \item $u,v$ are selected in order to maximize an objective $g(y)$ dependent on the output $y$
-    \item $\dot{x}$ is updated
-    \item $x$ is updated based on the ODE equation. 
-\end{itemize}
-
-\begin{algorithm}
-\caption{Dynamic Model}
-\label{alg:dynamic_model}
-\begin{algorithmic}[1] % This number determines the starting line number
-    \State Initialize {$x \in X$} feasible state
-    \State $u \gets arg \max_{y,u.v \ t.q. \ y = <G|M(x,u,v)> } g(y) $
-    \For{$t = 0$ to $T$} 
-        \State $\dot{x} \gets <F_1|M(x,u,v)>$
-        \State $x \gets x + \Delta t \dot{x}$ 
-        \State $u,v \gets arg \max_{y,u,v \ t.q. \ y = <G|M(x,u,v)> } g(y) $
-    \EndFor
-\end{algorithmic}
-\end{algorithm}
-
-\subsection{Idea 3: Implicit ODE solver for iMTI}
-
-Let the iMTI $\mathcal{S}$  be defined by the following equation:
-\begin{equation}
-    <H|M(\dot{x},x,u,y)> = 0
-\end{equation}
-
-We can define the Initial Value Problem:
-\begin{align}
-    x(0) &= x_0 \\
-    u(t) &= \overline{u} \\ 
-    <H|M(\dot{x},x,u,y)> &= 0
-\end{align}
-
-In order solve the IVP numerically we want to use an implicit method like for example the backwards Euler method. The objective is to create an equation in terms of $\dot{x_{t+1}},\dot{x_{t}}, x_{t+1}, \dot{x_{t}}$ and then solve this equation for $x_{t+1}$. Here however $ \dot{x}_{t+1}$ is defined implicitly so it's not obvious to use this method.
-
-\begin{equation}
-    x_{t+1} = x_t + \dot{x}_{t+1} \Delta t
-\end{equation}
-
-To solve this problem, and only if $det(\partial H_{\dot{x}} \neq 0 $ we can use the implicit function theorem to construct the function $\dot{x}(x,u)$ s.t. $<H|M(\dot{x},x,u,y)> =0$. Therefore by changing the previous function we obtain a new equation which its only unknown value is now $x_{t+1}$. This approach is limited by our capability of finding the explicit expression of the implicit function and by the actual existence of the explicit function. Additionally, the explicit form of the implicit function varies from point to point.  
-\begin{equation}
-    x_{t+1} = x_t + \dot{x}(x_{t+1}, u_{t+1}) \Delta t
-\end{equation}
-
-Alternatively, we could use some kind of explicit function such as RK4. In that case, the explicit equation could take the form:
+Additionally, we need to consider the system's equations. 
+Using the previous tensor notation we can describe the system equations explicitly as follows,
+where $F \in \mathbb{R}^{\times_2 (n+m) \times n}$, $G \in \mathbb{R}^{\times_2 (n+m) \times p}$:
 
 \begin{align}
-    x_{t+1} &= x_t + \dot{x}(x_{t} + \dot{x_t}\Deltat, u_{t+1}) \Delta t \\
-    \dot{x}&(x_{t}, u_{t+1}) \ & \text{The solution in $\dot{x}$  to the equation} <H|M(\dot{x},x,u,y)> = 0
+    \dot{x} &= <F|M(x,u)>
+    y &= <G|M(x,u)>
 \end{align}
 
-\subsection{Idea 4: Optimization Model}
+Another way to define an MTI's state evolution is through the use of an implicit multilinear equation.
+In this case the tensor $H \in \mathbb{R}^{\times_2 (2n+m+p) \times n+p}$ defines the state evolution. 
+Additionnally, we would need to add the conditions $det(\partial_{\dot{x}} H) \neq 0$, $det(\partial_y H) \neq 0$ 
+for the system to be properly defined (implicit function theorem). Otherwise, more equations would be need to 
+define the system completely.
 
-We use the new available algebraic constraints. 
-\bibliographystyle{johd}
-\bibliography{bib}
+\begin{equation}
+    <H| M(\dot{x}, x, u, y)> = 0
+\end{equation}
+
+It is clear that the explicit formulation can be transformed into the implicit one such that the resulting system is:
+Where $\overline{H}$ is chosen approprietely to represent the $(n+p)$ multilinear equations $\dot{x} - <F|M(x,u)> = 0$
+and $y - <G|M(x,u)> = 0$.
+\begin{equation}
+    <\overline{H}| M(\dot{x}, x, u, y)> = 0
+\end{equation}
+
+\section{Numerical Methods}
+
+\subsection{Numerical Methods for ODE's}
+
+ODEs can be represented by the following implicit equation:
+
+\begin{equation}\label{ODE:implicit}
+    f(x, \dot{x}, t) = 0
+\end{equation}
+
+One specific method to solve a ystem of ODE are implicit methods. 
+This is a type of family of methods that discretizes the time variable into a set of timesteps
+$\mathcal{T}:=\{1,...,T\}$. An initial value $x_0$ for $x$ is given and then the following values are 
+found by solving an equation involving the function in \ref{ODE:implicit}. 
+More specifically, we solve the equation $g(x_{t+1}, x_t) = 0$ where $x_t$ is known, $x_{t+1}$ is the unknown,
+anf $g$ has the following expression:
+
+\begin{equation}
+    g(x_{t+1}, x_t) = f(x_{t+1}, \frac{x_{t+1}- x_t}{\Delta t}, t+1) 
+\end{equation}
+
+We want to adapt this method to solve an explicit DAE as in \ref{DAE:explicit}. To do so we 
+define a new function $\overline{F}(x,u)$ that can be used as the implicit function. 
+
+\begin{equation}
+    \overline{F}(\dot{x}, x, z, u) =
+    \begin{pmatrix}
+        \dot{x} - <F|M(x, z, u)> \\
+        <G|M(x, z, u)>
+    \end{pmatrix} 
+\end{equation}
+
+\begin{equation}
+    \overline{G}(x_{t+1}, x_{t}, z_{t+1}, u_{t+1}) =  \overline{F}(\frac{x_{t+1}- x_t}{\Delta t}, x_{t}, z_{t+1}, u_{t+1})
+\end{equation}
+
+We can describe the method in algorithmic form as follows:
+
+
+
+\section{Case Study 1}
+
+For this case study we define a non linear EDO of the following form:
+Where $x \in \mathcal{C}(\mathbb{R}^n, \mathbb{R})$, $A, B, C \in \mathbb{R}^{n \times n } $.
+\begin{equation}
+    \dot{x}(t) = Ax(t) + B(x(t) \odot x(t)) + x^T(t) C x(t)
+\end{equation}
+
+The equation represents an EDO with a linear component $A$ and a quadratic component $B$.
+The objective is to transform this ODE into a multi linear DAE.
+For this purpose, we add $n$ auxiliary variables in the form of the vector v as well as n algebraic equations.
+
+\begin{align}
+    B(x(t) \odot x(t)) \\
+    \Leftrightarrow \left\{
+        \begin{array}{ll}
+            B(u(t) \odot x(t)) \\
+            u(t) = x(t)
+        \end{array}
+    \right.
+\end{align}
+
+This yields the following multi linear DAE system:
+
+\begin{align}
+    \dot{x}(t) = Ax(t) + B(u(t) \odot x(t)) \\
+    0 = u(t) - x(t)
+\end{align}
+
+\begin{equation}
+    A =
+    \begin{pmatrix}
+        -0.5 & 0.1 & 0 & 0 & 0 \\
+        0.5 & -0.2 & 0.1 & 0 & 0 \\
+        0 & 0 & -0.3 & 0 & 0 \\
+        0 & 0 & 0 & 0.4 & -0.1 \\
+        0 & 0 & 0 & 0 & -0.2 \\
+    \end{pmatrix},
+
+    B = 
+    \begin{pmatrix}
+        0 & 0 & 0 & 0 & 0 \\
+        0 & 0& 0 & 0 & 0 \\
+        0 & 0 & 0 & 0 & 0 \\
+        0 & 0 & 0 & 0 & -0.1 \\
+        0 & 0 & 0 & 0 & 0 \\
+    \end{pmatrix},
+
+    C = 
+    \begin{pmatrix}
+        0 & 0.05 & 0 & 0.1 & 0 \\
+        0 & 0& 0 & 0 & 0 \\
+        0 & 0 & 0 & 0 & 0 \\
+        0 & 0 & 0 & 0 & 0 \\
+        0 & 0 & 0 & 0 & -0.1 \\
+    \end{pmatrix}
+\end{equation}
+
+Finally we transform into the tenorsorized formulation of an iMTI.
+Where $F, G \in \mathbb{R}^{\times_2 2n \times n}$
+\begin{align}
+    \dot{x}(t) &= <F|M(x,u)> \\
+    0 &= <G|M(x,u)>
+\end{align}
+
+
+\begin{align}
+    F_{i_1, ..., i_n, j_1, ...j_n, k} &= \left\{
+        \begin{array}{ll}
+            A_{k,l} & \text{if } i_l = 1 \text{ and } \sum_{m= 1}^n i_m + j_m = 1 \\
+            B_{k,l} +  & \text{if } i_l = 1, j_l = 1 \text{ and } \sum_{m= 1}^n i_m + j_m = 2 \\
+            0 & \text{otherwise} 
+        \end{array}
+    \right.\\
+    G_{i_1, ..., i_n, j_1, ...j_n, k} &= \left\{
+        \begin{array}{ll}
+            1 & \text{if } i_l = 1, l=k \text{ and } \sum_{m= 1}^2 i_m + j_m = 1 \\
+            -1 & \text{if } j_l = 1, l=k \text{ and } \sum_{m= 1}^2 i_m + j_m = 1 \\
+            0 & \text{otherwise} 
+        \end{array}
+    \right.\\
+\end{align}
+
+\section{Case Study 2}
+
+For this case study we define a non linear EDO of the following form:
+Where $x \in \mathcal{C}(\mathbb{R}^n, \mathbb{R})$, $A_i \in \mathbb{R}^{n \times n } \quad \forall i$.
+\begin{equation}
+    \dot{x}_i(t) = x^T(t) A_i x(t) \ \ \forall i \in \{1,...,n\} 
+\end{equation}
+
+Using the same procedure done in the first case study we build the explicit multilinear tensor equations defining the model.
+\begin{align}
+    \dot{x}(t) &= <F|M(x,u)> \\
+    0 &= <G|M(x,u)>
+\end{align}
+
+\begin{align}
+    F_{i_1, ..., i_n, j_1, ...j_n, k} &= \left\{
+        \begin{array}{ll}
+            A_{k,l,m} + A_{k,m,l} & \text{if } l \neq m, \quad i_l = 1, i_m = 1 \text{ and } \sum_{m= 1}^n i_m + j_m = 2 \\
+            A_{k,l,l} & \text{if } i_l = 1, j_l = 1 \text{ and } \sum_{m= 1}^n i_m + j_m = 2 \\
+            0 & \text{otherwise} 
+        \end{array}
+    \right.\\
+    G_{i_1, ..., i_n, j_1, ...j_n, k} &= \left\{
+        \begin{array}{ll}
+            1 & \text{if } i_l = 1, l=k \text{ and } \sum_{m= 1}^n i_m + j_m = 1 \\
+            -1 & \text{if } j_l = 1, l=k \text{ and } \sum_{m= 1}^n i_m + j_m = 1 \\
+            0 & \text{otherwise} 
+        \end{array}
+    \right.\\
+\end{align}
+
+Let's us now analize the DAE's index. By virtue of the equations being in explicit form the first equation are already a ODE so they are of differential index 0.
+On the other hand the algbraic equations consist exclusively of equations of the form $u_i = x_i$, therefore differentiating the equation once already gives a EDO.
+This means that the DAE in this form is of index 1. 
 
 \end{document}

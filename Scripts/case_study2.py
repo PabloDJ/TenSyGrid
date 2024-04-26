@@ -18,13 +18,12 @@ L = 50
 R = 0.5
 C = 20
 
-
+verbose = True
 T = 100
-t = range(T)
 #Here x = (i i'), u = (v v'
 
-n = 3
-A = 5*np.random.rand(n,n,n)
+n = 6
+A = np.random.rand(n,n,n) - 0.5*np.ones((n,n,n))
 #We define a non linear (neither Multi Linear) time indepedenment EDO system
 def f_EDO(y, t):
     dydt = np.zeros(n)
@@ -40,16 +39,18 @@ F_shape = (2,)*n + (2,)*n + (e,)
 F = np.zeros(F_shape)
 for i in range(n):
     A_i = A[i]
-    F_index = [0]*n + [0]*n + [i]
-    for j,k in itertools.product(range(0, n), repeat=2):
-        F_index[j] = 1 
-        F_index[k] = 1 
-        if j!= k:
-            F[tuple(F_index)] = A_i[j,k]
-        else:
-            F_index[n+k] = 1
-            F[tuple(F_index)] = A_i[j,k]
+    for j in range(n):
+        for k in range(j+1):    
+            F_index = [0]*n + [0]*n + [i]
+            F_index[j] = 1 
+            F_index[k] = 1 
+            if j!= k:
+                F[tuple(F_index)] = A_i[j,k] + A_i[k,j]
+            else:
+                F_index[n+k] = 1
+                F[tuple(F_index)] = A_i[j,k]
  
+#We now consider the Algebraic part by defining the apropriate tensor G
 e = n
 G_shape = [2]*n + [2]*n + [e]
 G = np.zeros(G_shape)
@@ -65,23 +66,27 @@ for i in range(n):
     
     G[tuple(G_index_x) + (i,)] = 1
     G[tuple(G_index_v) + (i,)] = -1
-#We now consider the Algebraic part
 
+#WE CHOSE ONE OF THE FOLLOWING DECOMPOSITION METHODS
 #F_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(F), rank=15) 
 #F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
 #F_CP_tensor = tl.decomposition.symmetric_parafac_power_iteration(tl.tensor(F), rank=10) 
 #F_CP_tensor = tl.decomposition.non_negative_parafac(tl.tensor(F), rank=10) 
-F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=5) 
-G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=5) 
-G_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(G), rank=10) 
-G_CP_tensor = MTI.Tensor_decomposition(G_CP_tensor[1],G_CP_tensor[0])
+F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=15) 
+G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=15) 
+#G_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(G), rank=5) 
+
+#IF NOT PARAFAC UNCOMMENT THE FOLLOWING 2 LINES
+#F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
+#G_CP_tensor = MTI.Tensor_decomposition(G_CP_tensor[1],G_CP_tensor[0])
 
 eMTI = MTI.eMTI(n, 0, 0, F, G)
 axis = [i for i in range(2*n)]
-f1 = lambda x: np.tensordot(F, l_methods.monomial(x, tensorize = True), axes=(axis, axis))
+f1 = lambda x: methods.inner_tensor_product(F, x)
 f2 = lambda x: methods.CP_MTI_product(F_CP_tensor, x)
 f3 = lambda x: f_EDO(x[:n], 1)
 
+print("axis is ", axis)
 x_0 = np.random.rand(n)
 z_0 = x_0
 xz_0 = np.concatenate((x_0, z_0))
@@ -91,8 +96,8 @@ print("shape F", F.shape)
 print("x monomial shape", l_methods.monomial(xz_0, tensorize = True).shape)
 u = np.random.rand(110,110)
 dt = 0.1
-t = np.linspace(0, 0.2, 10)
-f1_eval = f1(x_0)
+t = np.linspace(0, 0.2, 100)
+f1_eval = f1(xz_0)
 f2_eval = f2(xz_0)
 f3_eval = f3(xz_0)
 print(f"f1 eval {f1_eval}")
@@ -129,13 +134,12 @@ def DAE_J(x, z, t):
     J = np.concatenate((partialx_F, partialx_G))
     return J
 
-
-
 DAE_start = time.time()
-x_sol, z_sol = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
+#x_sol, z_sol = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
 DAE_time = time.time()- DAE_start
 DAE2_start = time.time()
 x_solbis, z_solbis = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t, DAE_Jacob = DAE_J)
+x_sol, z_sol = (x_solbis, z_solbis )
 DAE2_time = time.time() - DAE2_start
 
 color_codes = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
@@ -155,4 +159,11 @@ for i in [0,1]:
     plt.show()
     plt.show()
 
-
+if verbose==True:
+    for ti in range(len(t)):
+        print("timestep is ", ti)
+        print(f"x EDO {sol[ti,:]}")
+        print(f"dxdt EDO {f_EDO(sol[ti,:],t)}")
+        print(f"x DAE {x_sol[ti,:]}")
+        print(f"f EDO DAE {f_EDO(x_sol[ti,:],t)}")
+        print(f"f1 DAE {f1(np.concatenate((x_sol[ti,:], x_sol[ti,:])))}")

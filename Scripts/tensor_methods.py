@@ -1,5 +1,6 @@
 import numpy as np
 import tensorly as tl
+import methods_linearize as l_methods
 #import tensorflow as tf
 import copy
 from scipy.optimize import fsolve
@@ -19,7 +20,7 @@ def CP_MTI_product(CP_tensor, x):
     res = res_x.flatten()
     return res
 
-def MTI_product(CP_tensor, x, u):
+def MTI_product(CP_tensor, x, u =np.array([])):
     F_factors = CP_tensor.factors
     F_weights = CP_tensor.weights
 
@@ -65,3 +66,10 @@ def compute_diff_CPx(D_F, x):
         prod = CP_MTI_product(D_Fi, x)
         Jacobian[:,i] = prod
     return Jacobian
+
+def inner_tensor_product(F, x):
+    monomial_x = l_methods.monomial(x)
+    monomial_x = tl.reshape(monomial_x , (2,)*len(x))
+    axis = [i for i in range(len(x))]
+    res_x = np.tensordot(F, monomial_x, axes=(axis, axis))
+    return res_x
