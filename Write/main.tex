@@ -7,6 +7,8 @@
 \usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 \usepackage{tikz-cd}
 \usepackage[colorlinks, linkcolor = blue, citecolor = magenta]{hyperref}
+\newenvironment{Notation}
+\newenvironment{remark}
 \title{TenSyGrid}
 
 \author{Pablo de Juan Vela $^{1}$ \\
@@ -16,28 +18,97 @@
 
 \begin{document}
 \maketitle
-\begin{abstract} 
-\end{abstract}
+
 
 \section{Tensor Notation}
 
 A tensor is an N-way array where its values are accesed by N indeces. In this sense, a vector is an order 1 tensor and a matrix an order 2 tensor.
 A tensor of order n in the real numbers can de defined as $F \in \mathbb{R}^{I_1 \times ... \times I_n}$, where $I_i$ is the dimension of the $i_{th}$ order.
 
-
+\begin{notation}
+    Let $F$ be a tensor in $F \in \mathbb{R}^{\times_2 n }$ of order $n$, where each dimension has legth $2$.
+\end{notation}
 
 \subsection{Tensor Operations}
 
-Let $F \in \mathbb{\mathbb{R}^{i_1 \times ... \times i_n}$. Then the tensor product can be defined as 
+
+\subsubsection*{Tensor Product}
+Let $F \in \mathbb{R}^{ j_1 \times ... \times j_m}$ and  
+$G \in \mathbb{R}^{i_1 \times ... \times i_n }$. Then the tensor product 
+$F \otimes G \in \mathbb{R}^{j_1 \times ... \times j_m, i_1 \times ... \times i_n }$ has
+the entries for $\forall a_k \in \{1,...,j_k\}, b_k \in \{1,...,i_k\}$:
 
 \begin{equation}
-    F \otimes G :=
+    (F \otimes G)_{a_1 , ... ,a_m,b_1 , ... ,b_n  } := f_{a_1,...,a_m}.g_{b_1,...,b_m}
 \end{equation}
+
+\subsubsection*{Inner Product}
+
+The inner product of two tensors of same order and dimension $F, G \in \mathbb{R}^{ j_1 \times ... \times j_m}$
+is a scalar that has the same properties of a vector product and is defined as:  
 
 \begin{equation}
-    <F,G>
+    <F,G> = \sum_{d_1=1}^{j_1} \sum_{d_2=1}^{j_2} \cdots \sum_{d_n=1}^{j_n} a_{d_1 d_2 \ldots d_n} b_{d_1 d_2 \ldots d_n}
 \end{equation}
 
+This concept can be generalized for tensors of different dimensions. 
+In this case the inner product can be interpreted as a form of order contraction.
+
+\subsubsection*{Monomial Tensor}
+
+Let $x \in \mathbb{R}^n$ a vector. Then $m(x) \in \mathbb{R}^{2^n}$ is a vector 
+such that each entry is a unique multilinear monomial of coefficient 1.
+More specifically, $m(x)$ is defined as follows:
+
+\begin{equation}
+    m(x) := \begin{pmatrix}
+        1 \\
+        x_1
+    \end{pmatrix}
+    \otimes ... \otimes
+    \begin{pmatrix}
+        1 \\
+        x_n
+    \end{pmatrix}
+\end{equation}
+
+Let $x \in \mathbb{R}^n$ a vector. We define $M(x) \in \mathbb{R}^{\times_2 n}$ as the monomial 
+tensor that is defined as follows. We can see that $M(x)$ is a reshaping of the monomial vector
+$m(x)$, $a_i \in \{0,1\} \forall i$.
+\begin{equation}
+    (M(x))_{a_1, ..., a_n} := \prod_{i=1}^{n} x_i^{a_i}
+\end{equation}
+
+\subsection{Properties}
+
+Let $F \in \mathbb{R}^{\times_2 n \times p}$ be a tensor of order $n+1$.
+And $\forall i \in \{0,..,n\} $ there exist $F_{x_i} \in \mathbb{R}^{2 \times r}$
+and $F_\phi  \in \mathbb{R}^{p \times r}$ such that, where $F_{i}(k)$ is the $k_{th}$
+column of $F_{x_i}$. 
+
+\begin{equation}
+    F = \sum_{k = 0}^r F_{x_1}(k) \otimes ... \otimes F_{x_n}(k) \otimes F_{x_\phi}(k) 
+\end{equation}
+
+Then we say that $[F_{x_1}, ..., F_{x_n}, F_\phi]$ is a decomposition of rank $r$ 
+of $F$. Additionally, if we consider a vector $x \in \mathbb{R}^n$ we have that 
+the following equation holds true:
+
+\begin{equation}
+    <F, M(x)> = F_{\phi}(F_{x_1}^T 
+    \begin{pmatrix}
+        1 \\
+        x_1    
+    \end{pmatrix}
+    \circledast
+    \dots
+    \circledast
+    F_{x_n}^T
+    \begin{pmatrix}
+        1 \\
+        x_n    
+    \end{pmatrix})
+\end{equation}
 
 \section{Multilinear models}
 
@@ -55,8 +126,6 @@ the multi linear polynomial $p(x)$ and a tensor $F$.
     F_{i_1,...,i_n} = a_{i_1, ..., i_n}
 \end{equation}
 
-
-
 \subsection{Multilinear Time Independent Models}
 
 Multilinear Time Independent models or (MTI) describes a system and its evolution over time. 
@@ -73,14 +142,14 @@ Using the previous tensor notation we can describe the system equations explicit
 where $F \in \mathbb{R}^{\times_2 (n+m) \times n}$, $G \in \mathbb{R}^{\times_2 (n+m) \times p}$:
 
 \begin{align}
-    \dot{x} &= <F|M(x,u)>
+    \dot{x} &= <F|M(x,u)>\\
     y &= <G|M(x,u)>
 \end{align}
 
-Another way to define an MTI's state evolution is through the use of an implicit multilinear equation.
+Another way to define an MTI's evolution is through the use of an implicit multilinear (iMTI) equation.
 In this case the tensor $H \in \mathbb{R}^{\times_2 (2n+m+p) \times n+p}$ defines the state evolution. 
 Additionnally, we would need to add the conditions $det(\partial_{\dot{x}} H) \neq 0$, $det(\partial_y H) \neq 0$ 
-for the system to be properly defined (implicit function theorem). Otherwise, more equations would be need to 
+for the system to be properly defined (implicit function theorem). Otherwise, more equations would be needed to 
 define the system completely.
 
 \begin{equation}
@@ -94,6 +163,51 @@ and $y - <G|M(x,u)> = 0$.
     <\overline{H}| M(\dot{x}, x, u, y)> = 0
 \end{equation}
 
+\subsection{Differential Algebraic Equations}
+
+Differential Algebraic Equations (DAE) are a set of problems defined by differential equations
+and another set of algebraic equations. An explicit formulation of a DAE can be done as follows:
+Where $x \in C(\mathbb{R}^n, \mathbb{R}), y \in C(\mathbb{R}^n, \mathbb{R}), t \in \mathbb{R}$
+
+\begin{align}\label{DAE:explicit}
+    \dot{x} &= f(x, z, t) \\
+    0 &= g(x, z, t)
+\end{align}
+
+It is clear from the previous equation that ODEs are a special case of DAEs where $g(x,z,t) = 0$.
+In general, DAEs are tighly linked with ODEs. One way to link them together is though the concept of index.
+The (differential) index of a DAE is the number of times the equations  of the DAE
+need to be differentiated in order to recover an explicit ODE. 
+However, it is important to note that the index is dependent on the formulation of the DAE
+as well as on the solution provided. Usually, a higher index means the DAE involves more complexity
+specially when solving it numerically. \\
+
+\begin{remark}
+    The explicit form of a DAE is specifically useful since it enables To
+    solve numerically the problem in a straighforward manner. First, considering the implicit function
+    $aux(x, t)$ that yields a set of variables $z$ such that $g(x, aux(x,t), t) = 0$. And then substituting
+    in the first equation. 
+    In pseudo-code this yields:
+
+    \begin{algorithm}
+        \caption{Implicit Stepforward}
+        \label{alg:implicit_stepforward}
+        \begin{algorithmic}[1] % This number determines the starting line number
+            \State Initialize {$x_0 \in X$} initial state.
+            \State Initialize {$z_0 \in Z$} initial auxiliary variables.
+            \For{$t = 0$ to $T$} 
+                \State Define $aux(x,t)$
+                \State Solve $f(x_{t+1}, aux(x_{t+1}, t+1), t+1) = 0$ for variable $x_{t+1}$.
+                \State $x_{t+1} \leftarrow x*$
+            \EndFor
+        \end{algorithmic}
+    \end{algorithm}
+\end{remark} 
+
+However this method does not always yield good numerical results. For this purpose,
+we will explore different numerical methods and analyse how they compare to each 
+other and, more specifically, which one fits the type of DAE that we are studying best.
+
 \section{Numerical Methods}
 
 \subsection{Numerical Methods for ODE's}
@@ -104,7 +218,7 @@ ODEs can be represented by the following implicit equation:
     f(x, \dot{x}, t) = 0
 \end{equation}
 
-One specific method to solve a ystem of ODE are implicit methods. 
+One specific method to solve a system of ODE are implicit methods. 
 This is a type of family of methods that discretizes the time variable into a set of timesteps
 $\mathcal{T}:=\{1,...,T\}$. An initial value $x_0$ for $x$ is given and then the following values are 
 found by solving an equation involving the function in \ref{ODE:implicit}. 
@@ -114,6 +228,12 @@ anf $g$ has the following expression:
 \begin{equation}
     g(x_{t+1}, x_t) = f(x_{t+1}, \frac{x_{t+1}- x_t}{\Delta t}, t+1) 
 \end{equation}
+
+\begin{remark}
+    This method consists of solving iteratively an implicit system of equations. 
+    These type of systems are usually solved using Newton-Raphson methods. These methods
+    demand a fixed number of evaluations of the function to be solved.
+\end{remark}
 
 We want to adapt this method to solve an explicit DAE as in \ref{DAE:explicit}. To do so we 
 define a new function $\overline{F}(x,u)$ that can be used as the implicit function. 
@@ -131,6 +251,20 @@ define a new function $\overline{F}(x,u)$ that can be used as the implicit funct
 \end{equation}
 
 We can describe the method in algorithmic form as follows:
+
+\begin{algorithm}
+    \caption{Implicit Stepforward}
+    \label{alg:implicit_stepforward}
+    \begin{algorithmic}[1] % This number determines the starting line number
+        \State Initialize {$x_0 \in X$} initial state.
+        \State Initialize {$z_0 \in Z$} initial auxiliary variables.
+        \For{$t = 0$ to $T$} 
+            \State Solve for $x_{t+1}, z_{t+1}$,  $\overline{G}(x_{t+1}, x_{t}, z_{t+1}, u_{t+1}) = 0$
+            \State $x_{t+1} \gets x*$ 
+            \State $z_{t+1} \gets z*$
+        \EndFor
+    \end{algorithmic}
+\end{algorithm}
 
 
 
@@ -248,8 +382,9 @@ Using the same procedure done in the first case study we build the explicit mult
     \right.\\
 \end{align}
 
-Let's us now analize the DAE's index. By virtue of the equations being in explicit form the first equation are already a ODE so they are of differential index 0.
-On the other hand the algbraic equations consist exclusively of equations of the form $u_i = x_i$, therefore differentiating the equation once already gives a EDO.
-This means that the DAE in this form is of index 1. 
+Let's us now analyze the DAE's index. By virtue of the equations being in 
+explicit form the first equation are already a ODE so they are of differential index 0.
+On the other hand the algbraic equations consist exclusively of equations of the form $u_i = x_i$, therefore differentiating the $n$ equations once already gives a EDO.
+This means that the DAE in this form is of index $1$. 
 
 \end{document}
