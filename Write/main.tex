@@ -7,8 +7,9 @@
 \usepackage{algpseudocode}% http://ctan.org/pkg/algorithmicx
 \usepackage{tikz-cd}
 \usepackage[colorlinks, linkcolor = blue, citecolor = magenta]{hyperref}
-\newenvironment{Notation}
+\newenvironment{notation}
 \newenvironment{remark}
+\newenvironment{property}
 \title{TenSyGrid}
 
 \author{Pablo de Juan Vela $^{1}$ \\
@@ -53,6 +54,17 @@ is a scalar that has the same properties of a vector product and is defined as:
 
 This concept can be generalized for tensors of different dimensions. 
 In this case the inner product can be interpreted as a form of order contraction.
+
+\subsubsection*{Hadamard Product}
+
+The Hadamard product between 2 tensors of equal dimensionw is the 
+point wise multiplication of those 2 tensors. 
+Let $F,G \in \mathbb{R}^{i_1,...,i_n}$ then we define $F\circledast G \in \mathbb{R}^{i_1,...,i_n}$
+the Hadamard product of $F$ and $G$ such that:
+
+\begin{equation}
+    (F\circledast G )_{i_1,...,i_n} = F_{i_1,...,i_n}G_{i_1,...,i_n}
+\end{equation}
 
 \subsubsection*{Monomial Tensor}
 
@@ -109,6 +121,8 @@ the following equation holds true:
         x_n    
     \end{pmatrix})
 \end{equation}
+
+\subsection{Tensor }
 
 \section{Multilinear models}
 
@@ -204,8 +218,8 @@ specially when solving it numerically. \\
     \end{algorithm}
 \end{remark} 
 
-However this method does not always yield good numerical results. For this purpose,
-we will explore different numerical methods and analyse how they compare to each 
+However, this method does not always yield good numerical results, specially with DAEs of higher index.
+For this purpose, we will explore different numerical methods and analyse how they compare to each 
 other and, more specifically, which one fits the type of DAE that we are studying best.
 
 \section{Numerical Methods}
@@ -232,7 +246,10 @@ anf $g$ has the following expression:
 \begin{remark}
     This method consists of solving iteratively an implicit system of equations. 
     These type of systems are usually solved using Newton-Raphson methods. These methods
-    demand a fixed number of evaluations of the function to be solved.
+    demand a fixed number of evaluations of the function to be solved. 
+    This means that, if we define $c$ as the number of calculations needed
+    to evaluate the implicit function then the complexity of the algorithm is
+    $\mathcal{O}(ct)$.
 \end{remark}
 
 We want to adapt this method to solve an explicit DAE as in \ref{DAE:explicit}. To do so we 
@@ -266,7 +283,110 @@ We can describe the method in algorithmic form as follows:
     \end{algorithmic}
 \end{algorithm}
 
+\begin{remark}
+    This method also consists of solving iteratively an implicit equation. 
+    In this case we are solving, a system of $(n+m)$ equations. If we define $c(n,m)$
+    as the number of calculations necessary to evaluate the function $f$.    
+\end{remark}
 
+\subsection*{Ill Conditioning \& Solvability}
+
+A problem is said to be well posed if a solution to the problem exists and if said solution is unique.
+In the case of the proposed algorithms the well posedness of the problem depends
+on the well posedness of the intermediate Newton-Raphson methods. 
+The most frequent problem that arise when dealing with  
+
+\begin{property}
+    Let $F,G$ the tensor defining a multilinear DAE in explicit formulation such that
+    $det(G_z(x,z,t)) \neq 0 \forall x \in X, z \in Z, t \in \mathcal{T}$
+    then  the algorithm \ref{alg:implicit_stepforward} is well posed. 
+\end{property}
+
+\subsection{Tensor Construction}
+
+Let $F \in \mathbb{R}^{n,n,p}$ representing $p$ multilinear 
+equations of order $2$. More specifically, $\forall k \in \{1,...,k\}$
+the tensor $F$ represents the following polynomial $q_k(x)$: 
+
+\begin{equation}
+    q_k(x) = \sum_{i=1}^n \sum_{j=1}^n (\frac{1+\delta_{i,j}}{2}) x_i x_j F_{i,j,k}  
+\end{equation}
+
+The tensor $F$ can be decomposed as follows: 
+\begin{align}
+    F &= \sum_{r = 1}^R F_1(r) \otimes F_2(r) \otimes F_3(r) \\
+    F_{i,j,k} &=\sum_{r = 1}^R F_1(i,r) F_2(j,r) F_3(k,r) 
+\end{align}
+
+We now consider the tensor $G \in \mathbb{R}^{\times_2n \times p}$. 
+representing the order 2 multilinear equations as a full tensor. 
+It is clear that in this case the tensor $G$ entries usually
+take $0$ as a value. Indeed we have that:
+
+\begin{equation}
+    G_{i_1,...,i_n} = \left\{
+        \begin{array}{ll}
+            F_{i_k, i_l} & \text{if } i_k = i_l = 1, \sum_m i_m = 2\\
+            0 & \text{otherwise}
+        \end{array}
+    \right.
+\end{equation}
+
+
+Therefore we want to take advantage of the sparsity of $G$ to find its 
+decomposition.
+Similarly as for $F$, the tensor $G$ can also be decompose, and each entry is equal to:
+\begin{equation}
+    G_{i_1,...,i_n} = \sum_{r = 1}^R G_1(i_1,r)\otimes ...\otimes G_n(i_n,r) 
+\end{equation}
+
+We want to derive from this equation a relationship between 
+both decompositon however this is not alwyas easy.
+Since we are dealing with an order 2, multilinear systems
+we can express the equation in 
+
+\begin{align}
+    <F, x \otimes x> &= F \circledast (x \otimes x) \\
+    &= (\sum_r f_1(r) \otimes f_2(r) ) \circledast (x \otimes x) \\
+    &= \sum_r( f_1(r) \otimes f_2(r) ) \circledast (x \otimes x) \\
+    &= \sum_r <f_1(r), x> <f_2(r), x> \\
+\end{align}
+
+When dealing with $p$ equations this can be generalized to \ref{eq:Fbilinear}
+where $f_1, f_2 \in \mathbb{R}^{n \times p}$. However, this equation excludes
+the lower order monomials, in this case
+\begin{equation}\label{eq:Fbilinear}
+    <F, x \otimes x> = \sum_{r=1}^R f_1(r)^T x \circledast f_2(r)^T x 
+\end{equation}
+
+If this is done for higher order polinomials of order $q$ we can find:
+\begin{equation}
+    <F, \otimes_{i = 1}^{q} x > = \sum_{r=1}^R f_1(r)^T x \circledast ... \circledast f_q(r)^T x 
+\end{equation}
+
+Finally, by combining the previous equations we 
+can express a multilinear function of maximum order $q$ as follows,
+where $F_{expanded} \in \mathbb{R}^{\times_{n+1}q \times p}$. The new change
+includes all the lower order multinomial monomials. 
+
+\begin{align}
+    F_{expanded} = [F_0, F_1, ..., F_n, F_\phi]
+    <F_{expanded}, \otimes_{i = 1}^{q}
+    \begin{pmatrix}
+        1 \\
+        x
+    \end{pmatrix}
+    > = F_\phi( F_0^T \begin{pmatrix}
+        1 \\
+        x
+    \end{pmatrix} \circledast \dots
+    F_n^T \begin{pmatrix}
+        1 \\
+        x
+    \end{pmatrix})
+\end{align}
+
+\subsection{Order $q$ polynomial model combination}
 
 \section{Case Study 1}
 

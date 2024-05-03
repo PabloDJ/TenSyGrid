@@ -14,8 +14,9 @@ def CP_MTI_product(CP_tensor, x):
     for i in range(len(x)):
         x_i = x[i]
         F_i = F_factors[i]
-        res_x = res_x*np.dot(F_i.T,np.array([[1], [x_i]]))
+        res_x = res_x*np.dot(F_i.T, np.array([[1], [x_i]]))
 
+    
     res_x = F_factors[-1]@res_x
     res = res_x.flatten()
     return res
@@ -73,3 +74,29 @@ def inner_tensor_product(F, x):
     axis = [i for i in range(len(x))]
     res_x = np.tensordot(F, monomial_x, axes=(axis, axis))
     return res_x
+
+def CP_MULT_polynomialtensor(F_decomposed, x):
+    #This function performs the multiplication <F| (1 x)...(1 x)>
+    one_x = np.concatenate((1,x)) 
+    F_factors = F_decomposed.factors 
+    F_weigths = F_decomposed.weigths
+    rank = F_factors[0].shape[1]
+    m = F_factors[-1].shape[0]
+    res = np.ones(m)
+    
+    for fi in F_factors[:-1]:
+        res = res*np.dot(fi.T, one_x)
+        
+    res = np.dot(F_factors[-1], res)
+    return res
+
+def MULT_polynomialtensor(F, x):
+    #This function performs the multiplication <F| (1 x)...(1 x)>
+    one_x = np.concatenate((1,x)) 
+    order_F = len(F.shape)
+    m = F.shape[-1]
+    res = np.ones(m)
+    
+    axis = (i for i in range(order_F - 1))
+    res = np.tensordot(F, one_x, axes =(axis, axis))
+    return res

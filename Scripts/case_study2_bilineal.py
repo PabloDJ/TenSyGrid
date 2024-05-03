@@ -1,8 +1,10 @@
 import numpy as np
 import tensorly as tl
+import tensorly.contrib.sparse.decomposition as tl_sparse
 from scipy.integrate import odeint
 from itertools import product
 from scipy.optimize import root
+from scipy.sparse import coo_array
 import matplotlib.pyplot as plt
 #import tensorflow as tf
 import MTI
@@ -11,7 +13,10 @@ import tensor_methods as methods
 import methods_linearize as l_methods
 import numerical as num
 import time
+import sparse
 import itertools
+import optimisation as optim
+import tensorly.contrib.sparse as tlsp
 #np.random.seed(42) 
 #We define grid parameters
 L = 50
@@ -20,10 +25,17 @@ C = 20
 
 verbose = True
 T = 100
-#Here x = (i i'), u = (v v'
-
-n = 6
+#Here x = (i i'), u = (v v')
+sorted(i for i in set(dir(tl)).intersection(dir(tlsp))
+       if not i.startswith('_'))
+print(tl.get_backend())
+n = 5
+Atry = tl.zeros((n,n,n))
 A = np.random.rand(n,n,n) - 0.5*np.ones((n,n,n))
+A = tl.tensor(A)
+A_CP_decomposed = tl.decomposition.parafac(A, rank =5)
+A_factors = A_CP_decomposed.factors
+
 #We define a non linear (neither Multi Linear) time indepedenment EDO system
 def f_EDO(y, t):
     dydt = np.zeros(n)
@@ -36,7 +48,8 @@ def f_EDO(y, t):
 #And we add auxiliary variable v s.t y5 = v
 e = n
 F_shape = (2,)*n + (2,)*n + (e,)
-F = np.zeros(F_shape)
+F_dict = {}
+
 for i in range(n):
     A_i = A[i]
     for j in range(n):
@@ -45,11 +58,19 @@ for i in range(n):
             F_index[j] = 1 
             F_index[k] = 1 
             if j!= k:
-                F[tuple(F_index)] = A_i[j,k] + A_i[k,j]
+                F_dict[tuple(F_index)] = A_i[j,k] + A_i[k,j]
             else:
                 F_index[n+k] = 1
-                F[tuple(F_index)] = A_i[j,k]
- 
+                F_dict[tuple(F_index)] = A_i[j,k]
+                
+F_coords = np.array(list(F_dict.keys())).T
+F_data = np.array(list(F_dict.values()))
+F_sparse = sparse.COO(F_coords, F_data, shape= F_shape)
+F_sparse_CP = tl_sparse.partial_tucker(F_sparse, rank = 10)
+F_sparse_CP = tl_sparse.tucker(F_sparse, rank = 10)
+F_sparse_CP = tl_sparse.parafac(F_sparse, rank = 10)
+print(F_sparse_CP)
+
 #We now consider the Algebraic part by defining the apropriate tensor G
 e = n
 G_shape = [2]*n + [2]*n + [e]
@@ -139,26 +160,34 @@ DAE_start = time.time()
 DAE_time = time.time()- DAE_start
 DAE2_start = time.time()
 x_solbis, z_solbis = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t, DAE_Jacob = DAE_J)
+DAE2_time = time.time()- DAE2_start
+DAE3_start = time.time()
+x_solbis2, z_solbis2 = num.algebraic_substitution_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
+DAE3_time = time.time()- DAE3_start
 x_sol, z_sol = (x_solbis, z_solbis )
-DAE2_time = time.time() - DAE2_start
+DAE3_time = time.time() - DAE3_start
 
 color_codes = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 print(f"time EDO is {EDO_time}")
 print(f"time DAE is {DAE_time}")
-print(f"time DAE2 is {DAE2_time}")
+print(f"time DAE 2 is {DAE2_time}")
+print(f"time DAE algebraic is {DAE3_time}")
 
 for i in [0,1]:
     plt.plot(t, sol[:, i], color_codes[0], label= f'y{i} EDO')
     plt.plot(t, x_sol[:, i], linestyle=':', color= color_codes[1], label=f'y{i} DAE')
     plt.plot(t, x_solbis[:, i], linestyle='--', color= color_codes[2], label=f'y{i} DAE + Jacob')
-    print("diff", sum(np.abs(sol[:, i]-x_solbis[:,i])))
-    print("diff", sum(np.abs(x_sol[:, i]-x_solbis[:,i])))
+    plt.plot(t, x_solbis[:, i], linestyle=':', color= color_codes[3], label=f'y{i} DAE_implicit + Jacob')
+    print("diff EDO DAE", sum(np.abs(sol[:, i]-x_solbis[:,i])))
+    print("diff DAE DAE", sum(np.abs(x_sol[:, i]-x_solbis[:,i])))
+    print("diff DAE ALG", sum(np.abs(x_sol[:, i]-x_solbis2[:,i])))
     plt.legend(loc='best')
     plt.xlabel('t')
     plt.grid()
     plt.show()
     plt.show()
 
+verbose = False
 if verbose==True:
     for ti in range(len(t)):
         print("timestep is ", ti)

@@ -132,3 +132,67 @@ def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
         x_values[i + 1], z_values[i + 1] = xz_next[:len(x0)], xz_next[len(x0):]
 
     return  x_values, z_values
+
+def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
+    """
+    Solves the semi-explicit DAE system where dot(x) = f(x, z, t) and 0 = g(x, z, t).
+    
+    Parameters:
+        f : function
+            Function that computes the derivative dot(x).
+        g : function
+            Algebraic constraint function g(x, z, t).
+        x0 : numpy.ndarray
+            Initial differential state vector.
+        z0 : numpy.ndarray
+            Initial algebraic state vector.
+        t0 : float
+            Initial time.
+        tf : float
+            Final time.
+        h : float
+            Time step size.
+    Returns:
+        t_values : numpy.ndarray
+            Array of time values.
+        x_values : numpy.ndarray
+            Matrix of differential states at each time step.
+        z_values : numpy.ndarray
+            Matrix of algebraic states at each time step.
+    """
+    num_steps = len(t)-1
+    h = t[1] - t[0]
+    x_values = np.zeros((num_steps + 1, len(x0)))
+    z_values = np.zeros((num_steps + 1, len(z0)))
+    t_values = t
+    x_values[0], z_values[0] = x0, z0
+
+    for i in range(num_steps):
+        t_next = t_values[i + 1]
+        def z_implicit(x, t):
+            def g_z(z): 
+                return g(x, z, t)
+            z_implicit, info, ier, msg = fsolve(g_z, z0, full_output=True)
+            return z_implicit
+        def solver_func(x):
+            z_impl = z_implicit(x, t_next)
+            res = z_impl - x_values[i] - h * f(x, z_impl, t_next)
+            return res
+        if type(DAE_Jacob) == bool:
+            x_next, info, ier, msg = fsolve(solver_func, x_values[i], full_output=True)
+        else:
+            def DAE_J(xz):
+                res = DAE_Jacob(xz[:len(x0)], xz[len(x0):], t)
+                res[:len(x0),:] = - h*res[:len(x0), :] 
+                res[:len(x0),:len(x0)] += np.eye(len(x0))
+                return res
+            x_next, info, ier, msg = fsolve(solver_func, x_values[i], fprime=DAE_J, full_output=True)
+        if ier != 1:
+            print(ier)
+            print(msg)
+            print("time is", t_next)
+            raise RuntimeError("Nonlinear solver did not converge")
+        x_values[i + 1] = x_next
+        z_values[i + 1] = z_implicit(x_next, t_next)
+
+    return  x_values, z_values
