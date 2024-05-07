@@ -40,7 +40,7 @@ $F \otimes G \in \mathbb{R}^{j_1 \times ... \times j_m, i_1 \times ... \times i_
 the entries for $\forall a_k \in \{1,...,j_k\}, b_k \in \{1,...,i_k\}$:
 
 \begin{equation}
-    (F \otimes G)_{a_1 , ... ,a_m,b_1 , ... ,b_n  } := f_{a_1,...,a_m}.g_{b_1,...,b_m}
+    (F \otimes G)_{a_1 , ... ,a_m,b_1 , ... ,b_n  } := F_{a_1,...,a_m}.G_{b_1,...,b_m}
 \end{equation}
 
 \subsubsection*{Inner Product}
@@ -370,7 +370,7 @@ where $F_{expanded} \in \mathbb{R}^{\times_{n+1}q \times p}$. The new change
 includes all the lower order multinomial monomials. 
 
 \begin{align}
-    F_{expanded} = [F_0, F_1, ..., F_n, F_\phi]
+    F_{expanded} = [F_0, F_1, ..., F_q, F_\phi]\\
     <F_{expanded}, \otimes_{i = 1}^{q}
     \begin{pmatrix}
         1 \\
@@ -385,6 +385,12 @@ includes all the lower order multinomial monomials.
         x
     \end{pmatrix})
 \end{align}
+
+This decomposition reduces the computational cost of the 
+function evaluation from $\mathcal{O}(pn^q)$ 
+to $\mathcal{O}(rnq)$. If we consider $q$ a fixed parameter
+of the algorithm we are reducing the cost from a polynomial
+of order $q$ to a linear cost, which is asignificant improvement.
 
 \subsection{Order $q$ polynomial model combination}
 

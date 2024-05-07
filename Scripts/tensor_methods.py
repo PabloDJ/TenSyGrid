@@ -77,14 +77,15 @@ def inner_tensor_product(F, x):
 
 def CP_MULT_polynomialtensor(F_decomposed, x):
     #This function performs the multiplication <F| (1 x)...(1 x)>
-    one_x = np.concatenate((1,x)) 
+    one_x = np.concatenate((np.array([1]),x)) 
     F_factors = F_decomposed.factors 
-    F_weigths = F_decomposed.weigths
+    F_weigths = F_decomposed.weights
     rank = F_factors[0].shape[1]
-    m = F_factors[-1].shape[0]
+    m = F_factors[0].shape[1]
     res = np.ones(m)
     
-    for fi in F_factors[:-1]:
+    
+    for i, fi in enumerate(F_factors[:-1]):
         res = res*np.dot(fi.T, one_x)
         
     res = np.dot(F_factors[-1], res)
@@ -92,11 +93,18 @@ def CP_MULT_polynomialtensor(F_decomposed, x):
 
 def MULT_polynomialtensor(F, x):
     #This function performs the multiplication <F| (1 x)...(1 x)>
-    one_x = np.concatenate((1,x)) 
+    one_x = np.concatenate((np.array([1]),x)) 
     order_F = len(F.shape)
+    q = order_F-1
     m = F.shape[-1]
     res = np.ones(m)
     
-    axis = (i for i in range(order_F - 1))
-    res = np.tensordot(F, one_x, axes =(axis, axis))
+    axis = list(i for i in range(order_F - 1))
+    
+    x_times_x = one_x
+    
+    for _ in range(q-1):
+        x_times_x = np.tensordot(x_times_x, one_x, axes = 0)
+        
+    res = np.tensordot(F, x_times_x, axes =(axis, axis))
     return res

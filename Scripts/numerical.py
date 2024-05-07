@@ -1,7 +1,28 @@
 import numpy as np
 import tensorly as tl
-from scipy.optimize import fsolve
+from scipy.optimize import fsolve, root
+from scipy.linalg import solve
+import plot
 
+def newton_raphson_multivariate(f, x0, tol=1e-6, max_iter=100):
+    """Newton-Raphson method for solving a system of equations with n variables and m outputs."""
+    x = np.array(x0, dtype=float)
+    for _ in range(max_iter):
+        J = jacobian(f, x)
+        F_val = np.array(f(x))
+        # Solve for delta x using the linear system J(x) * delta_x = -F(x)
+        try:
+            delta_x = solve(J, -F_val)
+        except np.linalg.LinAlgError:
+            print("Jacobian is singular, cannot solve.")
+            return None
+        # Update the estimate
+        x += delta_x
+        # Check for convergence
+        if np.linalg.norm(delta_x) < tol:
+            return x
+    print("Did not converge within the maximum number of iterations.")
+    return None
 
 def trapezoidal_implicit(func, y0, t):
     """
@@ -67,6 +88,8 @@ def backward_euler_DAE(F, J, y0, t):
         J_next = lambda y: J(y, (y - y_values[i]) / h, t)
         y_next, info, ier, msg = fsolve(F_next, y_values[i], fprime=J_next, full_output=True)
         if ier != 1:
+            xz_next =  y_values[i]
+            print(f" f(x) is {F_next(y_next)}")
             raise RuntimeError(f"Nonlinear solver did not converge: {msg}")
         y_values[i + 1] = y_next
 
@@ -116,21 +139,36 @@ def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
 
             return res
         if type(DAE_Jacob) == bool:
-            xz_next, info, ier, msg = fsolve(solver_func, np.concatenate([x_values[i], z_values[i]]), full_output=True)
+            sol  = root(solver_func, np.concatenate([x_values[i], z_values[i]]))
+            xz_next = sol.x
+            ier = sol.success
+            msg = sol.message
         else:
             def DAE_J(xz):
                 res = DAE_Jacob(xz[:len(x0)], xz[len(x0):], t)
                 res[:len(x0),:] = - h*res[:len(x0), :] 
                 res[:len(x0),:len(x0)] += np.eye(len(x0))
                 return res
-            xz_next, info, ier, msg = fsolve(solver_func, np.concatenate([x_values[i], z_values[i]]), fprime=DAE_J, full_output=True)
+            sol  = root(solver_func, np.concatenate([x_values[i], z_values[i]]))
+            xz_next = sol.x
+            ier = sol.success
+            msg = sol.message
         if ier != 1:
-            print(ier)
-            print(msg)
             print("time is", t_next)
+   
+   
+            print("message ", msg)
+            xz_next = np.concatenate([x_values[i], z_values[i]])
+            print(f" f(x) is {solver_func(xz_next)}")
+            J = jacobian(solver_func, xz_next)
+            print(f"jacobian  {J}")
+            sol = newton_raphson_multivariate(solver_func, np.concatenate([x_values[i], z_values[i]]))
+            print("N_R gives the solution ", sol)
+            print("with value ", solver_func(sol))
+            
+            plot.vicinity(solver_func, xz_next)
             raise RuntimeError("Nonlinear solver did not converge")
         x_values[i + 1], z_values[i + 1] = xz_next[:len(x0)], xz_next[len(x0):]
-
     return  x_values, z_values
 
 def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
@@ -172,27 +210,97 @@ def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
         def z_implicit(x, t):
             def g_z(z): 
                 return g(x, z, t)
-            z_implicit, info, ier, msg = fsolve(g_z, z0, full_output=True)
+            sol = root(g_z, z0)
+            z_implicit = sol.x
             return z_implicit
         def solver_func(x):
             z_impl = z_implicit(x, t_next)
             res = z_impl - x_values[i] - h * f(x, z_impl, t_next)
             return res
         if type(DAE_Jacob) == bool:
-            x_next, info, ier, msg = fsolve(solver_func, x_values[i], full_output=True)
+            sol  = root(solver_func, x_values[i])
+            x_next = sol.x
+            ier = sol.success
+            msg = sol.message
         else:
             def DAE_J(xz):
                 res = DAE_Jacob(xz[:len(x0)], xz[len(x0):], t)
                 res[:len(x0),:] = - h*res[:len(x0), :] 
                 res[:len(x0),:len(x0)] += np.eye(len(x0))
                 return res
-            x_next, info, ier, msg = fsolve(solver_func, x_values[i], fprime=DAE_J, full_output=True)
+            sol  = root(solver_func, x_values[i], jac=DAE_J)
+            x_next = sol.x
+            ier = sol.success
+            msg = sol.message
         if ier != 1:
             print(ier)
             print(msg)
             print("time is", t_next)
+            xz_next = np.concatenate([x_values[i], z_values[i]])
+            print(f" Jacobian is {jacobian(solver_func, xz_next)}")
+            plot.vicinity(solver_func, x0)
             raise RuntimeError("Nonlinear solver did not converge")
         x_values[i + 1] = x_next
         z_values[i + 1] = z_implicit(x_next, t_next)
 
     return  x_values, z_values
+
+def jacobian(f, x0):
+    epsilon = 1e-6
+
+    # Initialize an empty Jacobian matrix
+    Jacobian = np.zeros((len(f(x0)), len(x0)))
+
+    # Compute the Jacobian matrix numerically using finite differences
+    for i in range(len(x0)):
+        x_plus_epsilon = np.array(x0)
+        x_plus_epsilon[i] += epsilon
+        J_plus_epsilon = f(x_plus_epsilon)
+
+        x_minus_epsilon = np.array(x0)
+        x_minus_epsilon[i] -= epsilon
+        J_minus_epsilon = f(x_minus_epsilon)
+
+        Jacobian[:, i] = (J_plus_epsilon - J_minus_epsilon) / (2 * epsilon)
+        
+    return Jacobian
+
+def numerical_hessian(func, x0, epsilon=1e-5):
+    """
+    Compute the numerical Hessian matrix of a scalar-valued function.
+    
+    Parameters:
+    - func: A scalar-valued function of a vector input
+    - x0: Initial point (numpy array) at which to compute the Hessian
+    - epsilon: Step size for finite difference
+    
+    Returns:
+    - Hessian matrix (numpy array of shape (n, n))
+    """
+    n = len(x0)
+    hessian = np.zeros((n, n))
+    perturb = np.zeros(n)
+
+    # Compute the Hessian using finite differences
+    for i in range(n):
+        for j in range(n):
+            if i == j:
+                # Diagonal elements (second derivatives)
+                perturb[i] = epsilon
+                f1 = func(x0 + perturb)
+                f2 = func(x0 - perturb)
+                f0 = func(x0)
+                hessian[i, j] = (f1 - 2 * f0 + f2) / (epsilon**2)
+                perturb[i] = 0
+            else:
+                # Off-diagonal elements (mixed partial derivatives)
+                perturb[i] = epsilon
+                perturb[j] = epsilon
+                f1 = func(x0 + perturb)
+                f2 = func(x0 - perturb)
+                f3 = func(x0 + np.array([epsilon, -epsilon]) * np.array([i == 0, j == 0]))
+                f4 = func(x0 + np.array([-epsilon, epsilon]) * np.array([i == 0, j == 0]))
+                hessian[i, j] = (f1 - f2 - f3 + f4) / (4 * epsilon**2)
+                perturb[i] = 0
+                perturb[j] = 0
+    return hessian

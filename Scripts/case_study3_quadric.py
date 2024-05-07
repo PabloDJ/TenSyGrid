@@ -29,31 +29,24 @@ T = 100
 sorted(i for i in set(dir(tl)).intersection(dir(tlsp))
        if not i.startswith('_'))
 print(tl.get_backend())
-n = 5
-Atry = tl.zeros((n,n,n))
-A = np.random.rand(n,n,n) - 0.5*np.ones((n,n,n))
-A = tl.tensor(A)
-A_CP_decomposed = tl.decomposition.parafac(A, rank =5)
-A_factors = A_CP_decomposed.factors
+n = 19
+
 
 #We define a non linear (neither Multi Linear) time indepedenment EDO system
-def f_EDO(y, t):
-    dydt = np.zeros(n)
-    y = y.reshape(-1, 1) 
-    for i in range(n):
-        dydt[i] = y.T@A[i]@y
-    return dydt
-
 #We first set up the tensor related to the problem
 #And we add auxiliary variable v s.t y5 = v
 e = n
-order = 2
+order = 3
 F_shape = (1+n+n,)*order + (e,)
 F = np.zeros(F_shape)
+F = np.random.rand(*F_shape) - 0.5*np.ones(F_shape)   
+F_lim_indices = (slice(0,1+n),)*order + (slice(0,e),)
+F_lim = F[F_lim_indices]
 
-F[1:(n+2), 1:(n+2), 0] = A[0]
-F[1:(n+2), 1:(n+2), 1] = A[1]
-F[1:(n+2), 1:(n+2), 2] = A[2]
+def f_EDO(y, t):
+    dydt = np.zeros(n)
+    dydt = methods.MULT_polynomialtensor(F_lim, y)
+    return dydt
                 
 #We now consider the Algebraic part by defining the apropriate tensor G
 e = n
@@ -62,17 +55,15 @@ G = np.zeros(F_shape)
 
 #Not necessary given that F takes the quadric parameters into account.
 for i in range(n):
-    G[1+i, 0, i] = 1
-    G[1+n+i, 0, i] = -1
+    G[i, 0, i] = 1
+    G[0, i, i] = 1
+    G[n+i, 0, i] = -1
+    G[0, n+i, i] = -1
+G = np.random.rand(*G_shape)    
 
 #WE CHOSE ONE OF THE FOLLOWING DECOMPOSITION METHODS
-#F_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(F), rank=15) 
-#F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
-#F_CP_tensor = tl.decomposition.symmetric_parafac_power_iteration(tl.tensor(F), rank=10) 
-#F_CP_tensor = tl.decomposition.non_negative_parafac(tl.tensor(F), rank=10) 
-F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=15) 
-G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=15) 
-#G_CP_tensor = tl.decomposition.parafac_power_iteration(tl.tensor(G), rank=5) 
+F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=8) 
+G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=8) 
 
 #IF NOT PARAFAC UNCOMMENT THE FOLLOWING 2 LINES
 #F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
@@ -80,8 +71,8 @@ G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=15)
 
 eMTI = MTI.eMTI(n, 0, 0, F, G)
 axis = [i for i in range(2*n)]
-f1 = lambda x: methods.inner_tensor_product(F, x)
-f2 = lambda x: methods.CP_MTI_product(F_CP_tensor, x)
+f1 = lambda x: methods.MULT_polynomialtensor(F, x)
+f2 = lambda x: methods.CP_MULT_polynomialtensor(F_CP_tensor, x)
 f3 = lambda x: f_EDO(x[:n], 1)
 
 print("axis is ", axis)
@@ -91,7 +82,6 @@ xz_0 = np.concatenate((x_0, z_0))
 xz_0 = np.random.rand(2*n)
 print("shape xz ", xz_0.shape)
 print("shape F", F.shape)
-print("x monomial shape", l_methods.monomial(xz_0, tensorize = True).shape)
 u = np.random.rand(110,110)
 dt = 0.1
 t = np.linspace(0, 0.2, 100)
@@ -122,8 +112,8 @@ def DAE_g(x, z, t):
     #We add the constraint  
     return res
 
-DF = methods.diffenrentiation_CP(F_CP_tensor)
-DG = methods.diffenrentiation_CP(G_CP_tensor)
+#DF = methods.diffenrentiation_CP(F_CP_tensor)
+#DG = methods.diffenrentiation_CP(G_CP_tensor)
 
 def DAE_J(x, z, t):
     xaux = np.concatenate((x,z))
@@ -136,12 +126,13 @@ DAE_start = time.time()
 #x_sol, z_sol = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
 DAE_time = time.time()- DAE_start
 DAE2_start = time.time()
-x_solbis, z_solbis = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t, DAE_Jacob = DAE_J)
+x_solbis, z_solbis = num.backward_euler_semi_explicit(DAE_f, DAE_g, x_0, z_0, t, DAE_Jacob = False)
 DAE2_time = time.time()- DAE2_start
 DAE3_start = time.time()
 x_solbis2, z_solbis2 = num.algebraic_substitution_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
 DAE3_time = time.time()- DAE3_start
 x_sol, z_sol = (x_solbis, z_solbis )
+x_solbis2, z_solbis2 = (x_solbis, z_solbis)
 DAE3_time = time.time() - DAE3_start
 
 color_codes = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']

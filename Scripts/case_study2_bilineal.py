@@ -17,6 +17,7 @@ import sparse
 import itertools
 import optimisation as optim
 import tensorly.contrib.sparse as tlsp
+import sparse_parafac as paraf
 #np.random.seed(42) 
 #We define grid parameters
 L = 50
@@ -66,6 +67,7 @@ for i in range(n):
 F_coords = np.array(list(F_dict.keys())).T
 F_data = np.array(list(F_dict.values()))
 F_sparse = sparse.COO(F_coords, F_data, shape= F_shape)
+F_decomp = paraf.cp_als_coo(F_sparse, rank = 10)
 F_sparse_CP = tl_sparse.partial_tucker(F_sparse, rank = 10)
 F_sparse_CP = tl_sparse.tucker(F_sparse, rank = 10)
 F_sparse_CP = tl_sparse.parafac(F_sparse, rank = 10)
@@ -101,7 +103,7 @@ G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=15)
 #F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
 #G_CP_tensor = MTI.Tensor_decomposition(G_CP_tensor[1],G_CP_tensor[0])
 
-eMTI = MTI.eMTI(n, 0, 0, F, G)
+eMTI = MTI.eMTI(n, 0, 0, F_sparse, G)
 axis = [i for i in range(2*n)]
 f1 = lambda x: methods.inner_tensor_product(F, x)
 f2 = lambda x: methods.CP_MTI_product(F_CP_tensor, x)
