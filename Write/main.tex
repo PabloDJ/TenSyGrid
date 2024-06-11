@@ -9,6 +9,7 @@
 \usepackage[colorlinks, linkcolor = blue, citecolor = magenta]{hyperref}
 \newenvironment{notation}
 \newenvironment{remark}
+\newenvironment{definition}
 \newenvironment{property}
 \title{TenSyGrid}
 
@@ -91,7 +92,10 @@ $m(x)$, $a_i \in \{0,1\} \forall i$.
     (M(x))_{a_1, ..., a_n} := \prod_{i=1}^{n} x_i^{a_i}
 \end{equation}
 
-\subsection{Properties}
+\subsection{Tensor decomposition and Properties}
+
+Let $F \in \mathbb{R}^{i_1,\dots,i_n}$ and $F_k \in \mathbb{R}^{i_k \times R}$
+
 
 Let $F \in \mathbb{R}^{\times_2 n \times p}$ be a tensor of order $n+1$.
 And $\forall i \in \{0,..,n\} $ there exist $F_{x_i} \in \mathbb{R}^{2 \times r}$
@@ -99,7 +103,7 @@ and $F_\phi  \in \mathbb{R}^{p \times r}$ such that, where $F_{i}(k)$ is the $k_
 column of $F_{x_i}$. 
 
 \begin{equation}
-    F = \sum_{k = 0}^r F_{x_1}(k) \otimes ... \otimes F_{x_n}(k) \otimes F_{x_\phi}(k) 
+    F = \sum_{k = 0}^r F_{x_1}(k) \otimes ... \otimes F_{x_n}(k) \otimes F_{\phi}(k) 
 \end{equation}
 
 Then we say that $[F_{x_1}, ..., F_{x_n}, F_\phi]$ is a decomposition of rank $r$ 
@@ -122,7 +126,20 @@ the following equation holds true:
     \end{pmatrix})
 \end{equation}
 
-\subsection{Tensor }
+More generally, let $F \in \mathbb{R}^{i_1 \times ... i_n}$
+then $[F_1, ..., F_n]$, where $F_k \in \mathbb{R}^{R \times i_k}$, 
+is an exact rank $R$ decomposition if the following equation is respected:
+
+\begin{equation}
+        F = \sum_{r = 0}^R F_{x_1}(r) \otimes ... \otimes F_{x_n}(r) \otimes F_{\phi}(r) 
+\end{equation}
+
+The rank $R$ of a tensor $F$ is the minimum integer so that there exist an 
+exact decomposition. Finding the rank of a tensor is usually a hard problem.
+In order to overcome this hurdle, we fix an integer and find the best decomposition
+possible for that rank. This is usually done thoush an optimisation problem that
+minimizes the Frobenius norm between the original tensor and the approximate decomposition.
+
 
 \section{Multilinear models}
 
@@ -221,6 +238,8 @@ specially when solving it numerically. \\
 However, this method does not always yield good numerical results, specially with DAEs of higher index.
 For this purpose, we will explore different numerical methods and analyse how they compare to each 
 other and, more specifically, which one fits the type of DAE that we are studying best.
+
+
 
 \section{Numerical Methods}
 
@@ -369,17 +388,17 @@ can express a multilinear function of maximum order $q$ as follows,
 where $F_{expanded} \in \mathbb{R}^{\times_{n+1}q \times p}$. The new change
 includes all the lower order multinomial monomials. 
 
-\begin{align}
-    F_{expanded} = [F_0, F_1, ..., F_q, F_\phi]\\
+\begin{align}\label{eq:fexpanded}
+    F_{expanded} &= [F_1, ..., F_q, F_\phi]\\
     <F_{expanded}, \otimes_{i = 1}^{q}
     \begin{pmatrix}
         1 \\
         x
     \end{pmatrix}
-    > = F_\phi( F_0^T \begin{pmatrix}
+    > &= F_\phi( F_0^T \begin{pmatrix}
         1 \\
         x
-    \end{pmatrix} \circledast \dots
+    \end{pmatrix} \circledast \dots \circledast
     F_n^T \begin{pmatrix}
         1 \\
         x
@@ -390,9 +409,136 @@ This decomposition reduces the computational cost of the
 function evaluation from $\mathcal{O}(pn^q)$ 
 to $\mathcal{O}(rnq)$. If we consider $q$ a fixed parameter
 of the algorithm we are reducing the cost from a polynomial
-of order $q$ to a linear cost, which is asignificant improvement.
+of order $q$ to a linear cost, which is a sificant improvement.
 
-\subsection{Order $q$ polynomial model combination}
+\begin{definition}
+    Let $F \in \mathbb{R}^{\times_n q}$ be a symmetric tensor of order $q$
+    we say that $[F_1,...,F_n]$ with $f \in \mathbb{R}^{n \times R}$ is an
+    $R$-rank symmetric decomposition if and only if 
+    $F_i = F_j =: a \quad \forall i,j \in \{1,\dots,n\}$.
+    Algebraically, this yields the following equation:
+
+    \begin{equation}
+        F = \sum_{r = 1}^R (\bigotimes_{i=1}^n f(r)) 
+    \end{equation}
+\end{definition}
+
+Given a symmetric tensor $F$ we can further simplify the expression
+\ref{eq:fexpanded} to the following:
+
+\begin{align}
+    <F_{symmetric}, \otimes_{i = 1}^{q} x> &=
+    \sum_{r=1}^R(f(r)^T  x)^q \\
+    &= <f(\bigodot_{i=1}^{q-1} f^T x) | x> \\
+    &= (\bigodot_{i=1}^{q-1} x^T f) f^T x
+\end{align}
+
+With this simplication the number of computations goes from
+$\mathcal{O}(rnq)$ to $\mathcal{O}(r(n+q))$. This can enable
+us to simulate problems with a higher maximum degree. However, 
+we remark that this decomposition is only handling an equation
+in one dimension. If we want to expand this decomposition to 
+handle the whole DAE we would actually need to find a decomposition
+of $F \in \mathbb{R}^{\times_n (q+1)}$ such that, with 
+$f_{\phi} \in \mathbb{R}^{n \times R}$ the factor related to last
+dimension.
+
+\begin{equation}
+    F = [f,...,f,f_{\phi}]
+\end{equation}
+
+\begin{equation}
+    <F, \otimes_{i = 1}^{q} x> = 
+    f_{\phi} (\bigotimes_{i = 1}^q f^t x) 
+\end{equation}
+
+\subsection{Auxiliary variables}
+
+WORK IN PROGRESS
+
+\subsubsection*{Absolute value of a variable}
+
+Let $v$ a variable from the original formulation, 
+we add 3 auxiliary variable $v^{abs}, v^+, v^-$.
+
+\begin{align}
+    (v^{abs} -v) (v^{abs} + v) &= 0 \\
+    v^+ . v^- &= 0 \\
+    v^+ + v^- &= v^{abs} 
+\end{align}
+
+By adding these $3$ new equations we now can use non
+polynomial operations for the variable $v$ operations.
+We remark that these new equations maintain the balance
+between the number of equations and the number of variables.
+
+\begin{align}
+    |v| &= v^{abs}\\
+    \max(v, 0) &= v^+ \\
+    \min(v, 0) &= v^- 
+\end{align}
+
+Let us consider the simple constraint for the 
+variable $v$, $v _{min} \geq v \geq v^{max}$.
+Then we can define the the following equation so that
+$v$ respects the previous constraints.
+
+\begin{equation}
+    \frac{\partial (v - v_{\min})^+}{\partial t} = \begin{cases}
+        0 & \text{if } v \leq v_{\min} \\
+        1 & \text{if } v \geq v_{\min}
+    \end{cases}
+    \qquad
+    \frac{\partial (v - v_{\max})^-}{\partial t} = \begin{cases}
+        -1 & \text{if } v \leq v_{\max} \\
+        0 & \text{if } v \geq v_{\max}
+    \end{cases}
+\end{equation}
+
+Finally, by adding a new  variable $v_{constrained}$ and combining it
+with the previous derivatives we can define a new equation that makes
+$v_{constrained}$ 
+\begin{equation}
+    -v_{constrained} \frac{\partial (v - v_{\min})^+}{\partial t}
+    \frac{\partial (v - v_{\max})^-}{\partial t} = v_{constrained}
+\end{equation}
+
+\begin{equation}
+    v_{constrained} =
+    \begin{cases}
+        v & \text{if } v \in [v_{\min}, v_{\max}] \\
+        0 & \text{otherwise }
+    \end{cases}
+\end{equation}
+
+\subsubsection{Generalized Constraints}
+
+Let us consider a constraint of the type $f(\dot{x}(t), x(t)) \geq 0$ in our system.
+We want to transform this inequality into an equality that can be included
+in the DAE formulation. A simple way to transform this inequality into an equality
+is to consider the negative part of function $f$ and then derivate it. By adding the
+following equality to the model we effectively ensure that the constraint is respected.
+Additionally, the DAE multi linear formulation is also maintained since it can be added 
+by just adding new polynomial equalities as seen with dealing with the absolute value.
+This formulation is explored further in the case study 4.
+
+\begin{align}\label{constraint:general}
+    f(\dot{x}(t), x(t)) &\geq 0 \\
+    \longleftrightarrow \frac{\partial (f)^-}{\partial t}(\dot{x}(t), x(t)) = 0
+\end{align}
+
+\subsubsection*{Trigonometric functions}
+
+Let $\theta$ a variable such that $cos(\theta), sin(\theta)$
+appear in the model equations. We add 2 auxiliary variables
+$u_{\theta}$, $v_{\theta}$. 
+
+\begin{align}
+    cos(\theta) &= u_{\theta}  \\
+    sin(\theta) &= v_{\theta} \\
+    u_{\theta}^2 + v_{\theta} ^2 &= 1
+\end{align}
+
 
 \section{Case Study 1}
 

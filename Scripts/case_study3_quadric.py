@@ -17,6 +17,7 @@ import sparse
 import itertools
 import optimisation as optim
 import tensorly.contrib.sparse as tlsp
+import scipy.io
 #np.random.seed(42) 
 #We define grid parameters
 L = 50
@@ -29,18 +30,19 @@ T = 100
 sorted(i for i in set(dir(tl)).intersection(dir(tlsp))
        if not i.startswith('_'))
 print(tl.get_backend())
-n = 19
+n = 80
 
 
 #We define a non linear (neither Multi Linear) time indepedenment EDO system
 #We first set up the tensor related to the problem
 #And we add auxiliary variable v s.t y5 = v
 e = n
-order = 3
+order = 2
 F_shape = (1+n+n,)*order + (e,)
+F_shape = (1+n,)*order + (e,)
 F = np.zeros(F_shape)
 F = np.random.rand(*F_shape) - 0.5*np.ones(F_shape)   
-F_lim_indices = (slice(0,1+n),)*order + (slice(0,e),)
+F_lim_indices = (slice(1+n),)*order + (slice(e),)
 F_lim = F[F_lim_indices]
 
 def f_EDO(y, t):
@@ -50,11 +52,13 @@ def f_EDO(y, t):
                 
 #We now consider the Algebraic part by defining the apropriate tensor G
 e = n
+e = 0
 G_shape = (1+n+n,)*order + (e,)
-G = np.zeros(F_shape)
+G = np.zeros(G_shape)
 
 #Not necessary given that F takes the quadric parameters into account.
 for i in range(n):
+    break
     G[i, 0, i] = 1
     G[0, i, i] = 1
     G[n+i, 0, i] = -1
@@ -62,9 +66,11 @@ for i in range(n):
 G = np.random.rand(*G_shape)    
 
 #WE CHOSE ONE OF THE FOLLOWING DECOMPOSITION METHODS
-F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank=8) 
-G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=8) 
-
+F_CP_tensor = tl.decomposition.parafac(tl.tensor(F), rank= 100) 
+try:
+    G_CP_tensor = tl.decomposition.parafac(tl.tensor(G), rank=100) 
+except:
+    a = 0
 #IF NOT PARAFAC UNCOMMENT THE FOLLOWING 2 LINES
 #F_CP_tensor = MTI.Tensor_decomposition(F_CP_tensor[1],F_CP_tensor[0])
 #G_CP_tensor = MTI.Tensor_decomposition(G_CP_tensor[1],G_CP_tensor[0])
@@ -77,9 +83,8 @@ f3 = lambda x: f_EDO(x[:n], 1)
 
 print("axis is ", axis)
 x_0 = np.random.rand(n)
-z_0 = x_0
+z_0 = np.array([])
 xz_0 = np.concatenate((x_0, z_0))
-xz_0 = np.random.rand(2*n)
 print("shape xz ", xz_0.shape)
 print("shape F", F.shape)
 u = np.random.rand(110,110)
@@ -93,12 +98,9 @@ print(f"f2 eval {f2_eval}")
 print(f"f3 eval {f3_eval}")
 
 EDO_start = time.time()
-print("sol 1")
 sol = odeint(f_EDO, x_0, t)
-print("sol 2")
-sol_trap = num.trapezoidal_implicit(f_EDO, x_0, t)
-print("solution is", sol)
 EDO_time = time.time() - EDO_start
+sol_trap = num.trapezoidal_implicit(f_EDO, x_0, t)
 
 #WE have system st x = (xdot1, x1, u1, u2, v1, v2) dxdt = (x)'
 def DAE_f(x, z, t):
@@ -108,7 +110,10 @@ def DAE_f(x, z, t):
 
 def DAE_g(x, z, t):
     xaux = np.concatenate((x,z))
-    res = methods.CP_MULT_polynomialtensor(G_CP_tensor, xaux)
+    try:
+        res = methods.CP_MULT_polynomialtensor(G_CP_tensor, xaux)
+    except:
+        res = np.array([])
     #We add the constraint  
     return res
 
@@ -132,8 +137,7 @@ DAE3_start = time.time()
 x_solbis2, z_solbis2 = num.algebraic_substitution_semi_explicit(DAE_f, DAE_g, x_0, z_0, t)
 DAE3_time = time.time()- DAE3_start
 x_sol, z_sol = (x_solbis, z_solbis )
-x_solbis2, z_solbis2 = (x_solbis, z_solbis)
-DAE3_time = time.time() - DAE3_start
+#x_solbis2, z_solbis2 = (x_solbis, z_solbis)
 
 color_codes = ['b', 'g', 'r', 'c', 'm', 'y', 'k', 'w']
 print(f"time EDO is {EDO_time}")
@@ -144,8 +148,7 @@ print(f"time DAE algebraic is {DAE3_time}")
 for i in [0,1]:
     plt.plot(t, sol[:, i], color_codes[0], label= f'y{i} EDO')
     plt.plot(t, x_sol[:, i], linestyle=':', color= color_codes[1], label=f'y{i} DAE')
-    plt.plot(t, x_solbis[:, i], linestyle='--', color= color_codes[2], label=f'y{i} DAE + Jacob')
-    plt.plot(t, x_solbis[:, i], linestyle=':', color= color_codes[3], label=f'y{i} DAE_implicit + Jacob')
+    plt.plot(t, sol[:, i] - x_solbis[:, i], linestyle='--', color= color_codes[2], label=f'Difference i')
     print("diff EDO DAE", sum(np.abs(sol[:, i]-x_solbis[:,i])))
     print("diff DAE DAE", sum(np.abs(x_sol[:, i]-x_solbis[:,i])))
     print("diff DAE ALG", sum(np.abs(x_sol[:, i]-x_solbis2[:,i])))

@@ -1,6 +1,7 @@
 import numpy as np
 import tensorly as tl
 import methods_linearize as l_methods
+import itertools as it
 #import tensorflow as tf
 import copy
 from scipy.optimize import fsolve
@@ -105,6 +106,25 @@ def MULT_polynomialtensor(F, x):
     
     for _ in range(q-1):
         x_times_x = np.tensordot(x_times_x, one_x, axes = 0)
-        
+    
     res = np.tensordot(F, x_times_x, axes =(axis, axis))
     return res
+
+def symmetrize_tensor(tensor):
+    order = tensor.ndim
+    symmetrized_tensor = np.zeros_like(tensor)
+    permutations = list(it.permutations(range(order)))
+    for perm in permutations:
+        symmetrized_tensor += np.transpose(tensor, perm)
+    symmetrized_tensor /= len(permutations)
+    return symmetrized_tensor
+
+def initialize_absvar(x):
+    n = len(x)
+    z = np.zeros(3*len(x))
+    
+    for i in range(n):
+        z[i] = np.abs(x[i])
+        z[i+1] = max(0, x[i])
+        z[i+2] = min(0, x[i])
+    return z

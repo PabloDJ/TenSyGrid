@@ -6,6 +6,7 @@ def vicinity(f, x0, verbose = False):
     n = len(x0)
     vicinity_size = np.ones(n)
     num_points = 100
+    print("the print function ")
 
     # Generate random points in the vicinity of x0
     np.random.seed(0)
@@ -21,8 +22,11 @@ def vicinity(f, x0, verbose = False):
     
     y_values = np.array(y_values)
     
+    if not verbose:
+        return
+    
     for i in range(y_values.shape[1]):
-        """fig = plt.figure(figsize=(10, 8))
+        fig = plt.figure(figsize=(10, 8))
         ax = fig.add_subplot(111, projection='3d')
         ax.scatter(x_values[:, 0], x_values[:, 1], c=y_values[:,i], cmap='viridis')
         ax.scatter(x0[0], x0[1], f(x0), color='red', label='$x_0$')
@@ -31,16 +35,17 @@ def vicinity(f, x0, verbose = False):
         ax.set_zlabel('Function Value')
         ax.set_title('Function Values in the Vicinity of $x_0$')
         plt.legend()
-        plt.show()"""
-        if verbose:
-            plt.figure(figsize=(8, 6))
-            plt.scatter(x_values[:, 0], x_values[:, 1], c=y_values[:,i], cmap='viridis')
-            plt.colorbar(label='Function Value')
-            plt.scatter(x0[0], x0[1], color='red', label='$x_0$')
-            plt.xlabel('$x_1$')
-            plt.ylabel('$x_2$')
-            plt.title('Function Values in the Vicinity of $x_0$')
-            plt.legend()
-            plt.grid(True)
-            plt.show()        
+        plt.show()
+        plt.show()        
+        
+        plt.figure(figsize=(8, 6))
+        plt.scatter(x_values[:, 0], x_values[:, 1], c=y_values[:,i], cmap='viridis')
+        plt.colorbar(label='Function Value')
+        plt.scatter(x0[0], x0[1], color='red', label='$x_0$')
+        plt.xlabel('$x_1$')
+        plt.ylabel('$x_2$')
+        plt.title('Function Values in the Vicinity of $x_0$')
+        plt.legend()
+        plt.grid(True)
+        plt.show()        
     return

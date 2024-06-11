@@ -18,6 +18,7 @@ import itertools
 import optimisation as optim
 import tensorly.contrib.sparse as tlsp
 import sparse_parafac as paraf
+from scipy.io import savemat
 #np.random.seed(42) 
 #We define grid parameters
 L = 50
@@ -67,11 +68,12 @@ for i in range(n):
 F_coords = np.array(list(F_dict.keys())).T
 F_data = np.array(list(F_dict.values()))
 F_sparse = sparse.COO(F_coords, F_data, shape= F_shape)
-F_decomp = paraf.cp_als_coo(F_sparse, rank = 10)
-F_sparse_CP = tl_sparse.partial_tucker(F_sparse, rank = 10)
-F_sparse_CP = tl_sparse.tucker(F_sparse, rank = 10)
-F_sparse_CP = tl_sparse.parafac(F_sparse, rank = 10)
-print(F_sparse_CP)
+savemat('Data/sparse_matrix.mat', {'values': F_sparse.data, 'coords': F_sparse.coords})
+
+#F_sparse_CP = tl_sparse.partial_tucker(F_sparse, rank = 10)
+#F_sparse_CP = tl_sparse.tucker(F_sparse, rank = 10)
+#F_sparse_CP = tl_sparse.parafac(F_sparse, rank = 10)
+#print(F_sparse_CP)
 
 #We now consider the Algebraic part by defining the apropriate tensor G
 e = n

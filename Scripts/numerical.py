@@ -95,7 +95,7 @@ def backward_euler_DAE(F, J, y0, t):
 
     return y_values
 
-def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
+def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False, binary = True):
     """
     Solves the semi-explicit DAE system where dot(x) = f(x, z, t) and 0 = g(x, z, t).
     
@@ -124,6 +124,8 @@ def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
     """
     num_steps = len(t)-1
     h = t[1] - t[0]
+    print(f"x0 is of length {len(x0)}")
+    print(f"z0 is of length {len(z0)}")
     x_values = np.zeros((num_steps + 1, len(x0)))
     z_values = np.zeros((num_steps + 1, len(z0)))
     t_values = t
@@ -132,10 +134,17 @@ def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
     for i in range(num_steps):
         t_next = t_values[i + 1]
         def solver_func(xz):
-            res =np.concatenate([
-            xz[:len(x0)] - x_values[i] - h * f(xz[:len(x0)], xz[len(x0):], t_next),
-            g(xz[:len(x0)], xz[len(x0):], t_next)
-            ])
+            if not binary:
+                res = np.concatenate([
+                xz[:len(x0)] - x_values[i] - h * f(xz[:len(x0)], xz[len(x0):], t_next),
+                g(xz[:len(x0)], xz[len(x0):], t_next)
+                ])
+            else:
+                n_aux = len(f(xz[:len(x0)], xz[len(x0):], t_next))
+                res = np.concatenate([
+                xz[:n_aux] - x_values[i,:n_aux] - h * f(xz[:len(x0)], xz[len(x0):], t_next),
+                g(xz[:len(x0)], xz[len(x0):], t_next)
+                ])
 
             return res
         if type(DAE_Jacob) == bool:
@@ -153,25 +162,22 @@ def backward_euler_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
             xz_next = sol.x
             ier = sol.success
             msg = sol.message
-        if ier != 1:
-            print("time is", t_next)
-   
-   
-            print("message ", msg)
-            xz_next = np.concatenate([x_values[i], z_values[i]])
-            print(f" f(x) is {solver_func(xz_next)}")
-            J = jacobian(solver_func, xz_next)
-            print(f"jacobian  {J}")
             sol = newton_raphson_multivariate(solver_func, np.concatenate([x_values[i], z_values[i]]))
-            print("N_R gives the solution ", sol)
-            print("with value ", solver_func(sol))
-            
-            plot.vicinity(solver_func, xz_next)
+        if ier != 1:
+            v = np.concatenate([x_values[i], z_values[i]])
+            print(f" f(x) is {solver_func(xz_next)}")
+            print("time is", t_next)
+            print("message ", msg)
+            J = jacobian(solver_func, xz_next)
+            print("determinant is ", np.linalg.det(J))
+            #sol = newton_raphson_multivariate(solver_func, np.concatenate([x_values[i], z_values[i]]))
+            print("N_R gives the solution ", xz_next)
+            plot.vicinity(solver_func, xz_next, verbose = True)
             raise RuntimeError("Nonlinear solver did not converge")
         x_values[i + 1], z_values[i + 1] = xz_next[:len(x0)], xz_next[len(x0):]
     return  x_values, z_values
 
-def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
+def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False, z_explicit = False):
     """
     Solves the semi-explicit DAE system where dot(x) = f(x, z, t) and 0 = g(x, z, t).
     
@@ -207,15 +213,18 @@ def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
 
     for i in range(num_steps):
         t_next = t_values[i + 1]
-        def z_implicit(x, t):
-            def g_z(z): 
-                return g(x, z, t)
-            sol = root(g_z, z0)
-            z_implicit = sol.x
-            return z_implicit
+        if type(z_explicit) == bool: 
+            def z_implicit(x, t):
+                def g_z(z): 
+                    return g(x, z, t)
+                sol = root(g_z, z0)
+                z_implicit = sol.x
+                return z_implicit
+        else: 
+            z_implicit = z_explicit
         def solver_func(x):
             z_impl = z_implicit(x, t_next)
-            res = z_impl - x_values[i] - h * f(x, z_impl, t_next)
+            res = x - x_values[i] - h * f(x, z_impl, t_next)
             return res
         if type(DAE_Jacob) == bool:
             sol  = root(solver_func, x_values[i])
@@ -238,7 +247,7 @@ def algebraic_substitution_semi_explicit(f, g, x0, z0, t, DAE_Jacob = False):
             print("time is", t_next)
             xz_next = np.concatenate([x_values[i], z_values[i]])
             print(f" Jacobian is {jacobian(solver_func, xz_next)}")
-            plot.vicinity(solver_func, x0)
+            plot.vicinity(solver_func, x0, verbose = True)
             raise RuntimeError("Nonlinear solver did not converge")
         x_values[i + 1] = x_next
         z_values[i + 1] = z_implicit(x_next, t_next)
