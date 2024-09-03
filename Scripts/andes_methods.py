@@ -12,6 +12,7 @@ from scipy.sparse import coo_array
 import matplotlib.pyplot as plt
 #import tensorflow as tf
 import MTI
+import pickle
 import Model_MTI
 import tensor_methods as methods
 import methods_linearize as l_methods
@@ -270,8 +271,8 @@ def build_var_dict(equations):
     return vars_dict
 
 def update_tensor(F_equations, F, bus_info=None, homogeneous=True):
-    #Given a set of p equations define by F
-    #add those equation to thye existing saved equations F
+    #Given a set of p equations defined by F
+    #add those equation to the existing saved equations F
     if not homogeneous:
         F_eq_const = F_equations[0,0,:]
         F_eq_linear = F_equations[0,:,:]
@@ -305,6 +306,41 @@ def update_tensor(F_equations, F, bus_info=None, homogeneous=True):
         F_res[bus_dict[bus_id][1]: 0: (l1 + l2) + i] = -1
     
     return F_res
+
+def save_variable(variable, filename):
+    """
+    Save a variable to a file using pickle if the file does not already exist.
+    
+    :param variable: The variable to be saved.
+    :param filename: The filename to save the variable to.
+    """
+    if not os.path.exists(filename):
+        with open(filename, 'wb') as file:
+            pickle.dump(variable, file)
+            print(f"Variable saved to {filename}")
+    else:
+        print(f"File {filename} already exists. Variable not saved.")
+
+def load_variable(filename):
+    """
+    Load a variable from a file using pickle.
+    
+    :param filename: The filename to load the variable from.
+    :return: The loaded variable.
+    """
+    if os.path.exists(filename):
+        try:
+            with open(filename, 'rb') as file:
+                variable = pickle.load(file)
+                print(f"Variable loaded from {filename}")
+                return variable
+        except:
+            print(f"Couldn't open {filename}")
+            return None
+
+    else:
+        print(f"File {filename} does not exist.")
+        return None
 
 def var_substitution(eqs, initial_vars, final_vars):
     res_eqs = eqs
@@ -359,7 +395,7 @@ def limiter_to_indicator(mdl, device):
     return initial_vars, target_vars
 
 def sys_to_eq(sys, mode = "dynamic", bool_print = True):
-    #this function takers a system as input and returns
+    #this function takes a system as input and returns
     #to set of lists one related to the combined f_function
     # and the other to the combined g_funtion
     F_res = []
@@ -379,6 +415,7 @@ def sys_to_eq(sys, mode = "dynamic", bool_print = True):
         try:
             vars_xy = copy.deepcopy(mdl.syms.vars_list)
             f_equations = copy.deepcopy(mdl.syms.f_list)
+            f_equations_LHS = copy.deepcopy(mdl.syms.f_list)
             g_equations = copy.deepcopy(mdl.syms.g_list)
             service_eqs = copy.deepcopy(mdl.syms.s_syms)
             _ = 0
@@ -443,7 +480,12 @@ def sys_to_eq(sys, mode = "dynamic", bool_print = True):
             config_list = [sp.Symbol(key) for key in config_list]
             
             #We substitute the limiter parameters to indicators functions
-            initial_lim, target_lim = limiter_to_indicator(mdl, device) 
+            initial_lim, target_lim = limiter_to_indicator(mdl, device)
+            
+            #We divide by the LHS when considering states 
+            for i, name in enumerate(mdl.states.keys()):
+                LHS = sys.dae.Tf[i]
+                f_equations_dev[i] = f_equations_dev[i]/LHS
             
             for i, eq in enumerate(f_equations_dev):
                 if type(eq)==int:
@@ -454,6 +496,8 @@ def sys_to_eq(sys, mode = "dynamic", bool_print = True):
                 f_equations_dev[i] = var_substitution(f_equations_dev[i], service_list, service_values)
                 f_equations_dev[i] = var_substitution(f_equations_dev[i], config_list, config_values)
                 f_equations_dev[i] = var_substitution(f_equations_dev[i], initial_lim, target_lim)
+                
+                    
             
             for i, eq in enumerate(g_equations_dev):
                 if type(eq)==int:
@@ -497,7 +541,7 @@ def sys_to_eq(sys, mode = "dynamic", bool_print = True):
                 for _ in range(3):
                     f_equations_dev[i] = var_substitution(f_equations_dev[i], initial_vars, final_vars)
                 undefined_vars = eq.free_symbols - set(vars_xy)
-                if len(undefined_vars)!=0:
+                if bool_print and len(undefined_vars)!=0:
                     print("model is ", mdl)
                     print(f"equation is {eq}")
                     print(undefined_vars)
@@ -506,7 +550,7 @@ def sys_to_eq(sys, mode = "dynamic", bool_print = True):
                 for _ in range(3):
                     g_equations_dev[i] = var_substitution(g_equations_dev[i], initial_vars, final_vars)
                 undefined_vars = eq.free_symbols - set(vars_xy)
-                if len(undefined_vars)!=0:
+                if bool_print and len(undefined_vars)!=0:
                     print(f"model is {mdl} at device {device}")
                     print(f"equation is {eq}")
                     print(undefined_vars)
@@ -525,19 +569,23 @@ def sys_to_eq(sys, mode = "dynamic", bool_print = True):
     
     #WE CHANGE THE INDICATOR FUNCTIONS DEPENDING ON DAE_t
     dae_t = sp.Symbol("dae_t")
-    ini_var = [sp.Heaviside(dae_t, 0), sp.Piecewise((1, dae_t < 0), (0, dae_t >= 0))]
+    ini_var_t = [sp.sympify('Indicator(dae_t >= 0)'), sp.sympify('Indicator(dae_t < 0)')]
+    ini_var_t2 = [sp.sympify('Indicator(dae_t >= 0)'), sp.sympify('Indicator(dae_t < 0)')]
     if mode == "dynamic":
-        target_var = [1, 0]
+        target_var_t = [1, 0]
     else:
-        target_var = [0, 1]
+        target_var_t = [0, 1]
     for i, eq in enumerate(g_equations_dev):
         if type(eq)==int:
             continue
-        g_equations_dev[i] = var_substitution(g_equations_dev[i], ini_var, target_var)
-    for i, eq in enumerate(g_equations_dev):
+        g_equations_dev[i] = var_substitution(g_equations_dev[i], ini_var_t, target_var_t)
+        g_equations_dev[i] = sp.simplify(g_equations_dev[i])
+    for i, eq in enumerate(f_equations_dev):
         if type(eq)==int:
             continue
-        f_equations_dev[i] = var_substitution(f_equations_dev[i], ini_var, target_var)
+        f_equations_dev[i] = var_substitution(f_equations_dev[i], ini_var_t, target_var_t)
+        f_equations_dev[i] = sp.simplify(f_equations_dev[i])
+        
     
     #We recoup the LHS of the differentiable equations 
     for i, x_name in enumerate(sys.dae.x_name):

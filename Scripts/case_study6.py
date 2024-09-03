@@ -21,8 +21,8 @@ import tensorly.contrib.sparse as tlsp
 import numerical
 import sympy as sp
 import andes_methods as ad_methods
-import io
-import re
+import os
+import pickle
 from scipy.optimize import approx_fprime
 
 if __name__ == '__main__':
@@ -33,50 +33,25 @@ andes.config_logger(30)
 list_cases()
 
 sys = andes.run(get_case('kundur/kundur_full.xlsx'))
-
-dae = sys.dae
-models = sys.models
-TGV = sys.TGOV1
-bus = sys.Bus
-line = sys.Line
-generator = sys.PQ
-l1 = line.bus1.get_names()
-l2 = line.bus1
-
-a1 = sys.find_models('tds')
-a2 = sys.find_models('pflow')
-
-dev = sys.find_devices()
-
-#we define an empty system ssand prepare the algebraic equations
-ss = andes.System()
-ss.GENCLS.prepare()
-
-#we define the system sys 2
-sys2 = andes.System()
-sys2.Bus.add(idx=1, id='Bus1', type='slack', V=1.0, theta=0.0)
-sys2.Bus.add(idx=2, id='Bus2', type='PQ', P=50.0, Q=30.0)
-
-# Add a generator with the GENCLS model
-sys2.GENCLS.add(idx=1, id='Gen1', bus=1, gen =1, P=80.0, Q=20.0, Vset=1.0)
-
-#ad_methods.prepare_all_models(sys)
-#ad_methods.prepare_all_models(sys2)
-#ad_methods.e_to_dae(ss)
-#ad_methods.e_to_dae(sys)
-#ad_methods.e_to_dae(sys2)
-#ad_methods.alt_prepare(sys)
-
 sys.PFlow.run()
 sys.TDS.run()
 
-F_sym, G_sym = ad_methods.sys_to_eq(sys, bool_print = True)
+F_sym = ad_methods.load_variable('F_sym.pkl')
+G_sym = ad_methods.load_variable('G_sym.pkl')
+
+if F_sym is None or G_sym is None:
+    F_sym, G_sym = ad_methods.sys_to_eq(sys, bool_print = False)
+    ad_methods.save_variable(F_sym, 'F_sym.pkl')
+    ad_methods.save_variable(G_sym, 'G_sym.pkl')
+    
 F_poly = ad_methods.equations_to_poly(F_sym)
 G_poly = ad_methods.equations_to_poly(G_sym)
+
+F_tensor = ad_methods.poly_to_tensor(F_poly)
+G_tensor = ad_methods.poly_to_tensor(F_poly)
+
 raise Exception("stop")
 #sym_processor = sys.syms  e
-
-
 atributes = vars(sys)
 atributes = vars(bus)
 verbose = False
